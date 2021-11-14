@@ -6,7 +6,7 @@ import pandas as pd
 from music21.chord import Chord
 from music21.note import Note
 
-chopin = converter.parse('chpn_op7_2.mid')
+chopin = converter.parse('ty_januar.mid')
 # chopin.plot('histogram', 'pitch')
 
 #key = chopin.analyze('key')
@@ -49,7 +49,6 @@ def generate_markov(arr, is_float = False, org=None):
 
     arr_zeros = np.zeros((size, size), int)
     for i in range(len(arr) - 1):
-       # print(arr[i])
         arr_zeros[arr[i + 1]][arr[i]] += 1
 
     df = pd.DataFrame(arr_zeros)  # convert to dataframe
@@ -109,7 +108,7 @@ for i in range(len(notes)):
     duration = durations[i]
 
     # Repeat each note 4 times.
-    for i in range(random.randint(1, 2)):
+    for i in range(random.randint(1, 3)):
         part.append(Note(note, quarterLength=float(duration)))
 
 mf = streamToMidiFile(part)
