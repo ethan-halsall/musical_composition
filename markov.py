@@ -37,9 +37,6 @@ for part in s2.parts:
 notes_arr = np.array(notes)
 duration_arr = np.array(duration)
 
-#duration_df = pd.DataFrame(duration)
-#duration_df = duration_df.groupby(0)[1].apply(np.array)
-
 def generate_markov(arr, is_float = False, org=None):
     unique = np.unique(arr)
     if is_float:
@@ -66,15 +63,6 @@ def generate_markov(arr, is_float = False, org=None):
     # Drop the sum column
     df = df.drop('sum', 1)
     return df
-
-def get_duration(note):
-    vals = duration_df.loc[[note]].values[0]
-    amount = len(vals)
-    unique, counts = np.unique(vals, return_counts=True)
-    probs = counts / amount
-    duration_index = np.random.choice(unique.size, p=probs)
-    return unique[duration_index]
-
 
 def generate(df, length=100):
     cur = df.sample()
