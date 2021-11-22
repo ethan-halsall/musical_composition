@@ -7,7 +7,7 @@ from music21.chord import Chord
 from music21.note import Note
 from music21.note import Rest
 
-chopin = converter.parse('mz_570_1.mid')
+chopin = converter.parse('ty_januar.mid')
 # chopin.plot('histogram', 'pitch')
 
 #key = chopin.analyze('key')
@@ -40,30 +40,22 @@ for part in s2.parts:
                  chords.append(element.name)
                  duration.append(element.quarterLength)
 
-def transition_matrix(transitions):
+def transition_matrix(transitions, order = 16):
     values, size = np.unique(transitions, return_counts=True)
     n = len(values)
 
     M = np.zeros((n, n), int)
 
-    print(values)
-
     for (x, y) in zip(transitions, transitions[1:]):
         i = np.where(values == x)[0][0]
         j = np.where(values == y)[0][0]
-
         M[i][j] += 1
 
-    df = pd.DataFrame(M)  # convert to dataframe
+    T = (M.T / M.sum(axis=1)).T
 
-    # calculate the total frequency of the each column
-    df['sum'] = df.sum(axis=1)
+    T = np.linalg.matrix_power(T, order)
 
-    # Calculate the probability of the transition occurring
-    df = df.div(df['sum'], axis=0)
-
-    # Drop the sum column
-    df = df.drop('sum', 1)
+    df = pd.DataFrame(T)  # convert to dataframe
 
     # Set axis labels
     df = df.set_axis(values)
@@ -98,7 +90,6 @@ for i in range(len(notes)):
     note = notes[i]
     duration = durations[i]
 
-  #  print(note)
     if note == "rest":
          part.append(Rest(quarterLength=duration))
     else: 
