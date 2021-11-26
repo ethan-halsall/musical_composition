@@ -7,6 +7,12 @@ from music21.chord import Chord
 from music21.note import Note
 from music21.note import Rest
 
+seed = random.randint(0, 2**32 - 1)
+
+print(f"Generating using seed: {seed}")
+
+np.random.seed(seed)
+
 def parse_midi(filename):
 
     music = converter.parse(filename)
