@@ -73,7 +73,7 @@ def generate(df, length=400):
         cur = df.loc[[note]]
     return notes
 
-chords, duration = parse_midi('beethoven_hammerklavier_3.mid')
+chords, duration = parse_midi('midi/beethoven_hammerklavier_3.mid')
 
 markov = transition_matrix(chords)
 markov_duration = transition_matrix(duration)
