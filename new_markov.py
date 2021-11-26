@@ -7,40 +7,38 @@ from music21.chord import Chord
 from music21.note import Note
 from music21.note import Rest
 
-chopin = converter.parse('ty_januar.mid')
-# chopin.plot('histogram', 'pitch')
+def parse_midi(filename):
 
-#key = chopin.analyze('key')
-#print(key.tonic.name, key.mode)
+    music = converter.parse(filename)
+    # chopin.plot('histogram', 'pitch'
 
-s2 = instrument.partitionByInstrument(chopin)
+    chords = []
+    duration = []
 
-notes = []
-chords = []
-notes_to_parse = None
-duration = []
+    for part in instrument.partitionByInstrument(music).parts:
+        # select elements of only piano
+        if 'Piano' in str(part):
+            notes_to_parse = part.recurse()
+            # finding whether a particular element is note or a chord
+            for element in notes_to_parse:
+                # notes
+                if isinstance(element, note.Note):
+                    pass
+                    chords.append(str(element.pitch))
+                    duration.append(element.quarterLength)
+                # chords
+                elif isinstance(element, chord.Chord):
+                    chords.append(' '.join(str(n.pitch) for n in element))
+                    duration.append(element.quarterLength)
+                # rests
+                elif isinstance(element, note.Rest):
+                    chords.append(element.name)
+                    duration.append(element.quarterLength)
 
-# Looping over all the instruments
-for part in s2.parts:
-    # select elements of only piano
-    if 'Piano' in str(part):
-        notes_to_parse = part.recurse()
-        # finding whether a particular element is note or a chord
-        for element in notes_to_parse:
-            # notes
-            if isinstance(element, note.Note):
-                chords.append(str(element.pitch))
-                duration.append(element.quarterLength)
-            # chords
-            elif isinstance(element, chord.Chord):
-                chords.append(' '.join(str(n.pitch) for n in element))
-                duration.append(element.quarterLength)
-            # rests
-            elif isinstance(element, note.Rest):
-                 chords.append(element.name)
-                 duration.append(element.quarterLength)
+    return chords, duration
 
-def transition_matrix(transitions, order = 16):
+
+def transition_matrix(transitions, order = 2):
     values, size = np.unique(transitions, return_counts=True)
     n = len(values)
 
@@ -63,10 +61,7 @@ def transition_matrix(transitions, order = 16):
     
     return df
 
-markov = transition_matrix(chords)
-markov_duration = transition_matrix(duration)
-
-def generate(df, length=200):
+def generate(df, length=400):
     cur = df.sample()
     notes = [cur.index.values[0]]
     columns = list(df.columns.values)
@@ -77,6 +72,11 @@ def generate(df, length=200):
         notes.append(note)
         cur = df.loc[[note]]
     return notes
+
+chords, duration = parse_midi('beethoven_hammerklavier_3.mid')
+
+markov = transition_matrix(chords)
+markov_duration = transition_matrix(duration)
 
 notes = generate(markov)
 durations = generate(markov_duration)
