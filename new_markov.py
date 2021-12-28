@@ -1,20 +1,22 @@
 import random
 
-from music21 import *
 import numpy as np
 import pandas as pd
+from music21 import *
 from music21.chord import Chord
-from music21.note import Note
+from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
+from music21.stream import Part
+import os
 
-seed = random.randint(0, 2**32 - 1)
+seed = random.randint(0, 2 ** 32 - 1)
 
 print(f"Generating using seed: {seed}")
 
 np.random.seed(seed)
 
-def parse_midi(filename):
 
+def parse_midi(filename):
     music = converter.parse(filename)
     # chopin.plot('histogram', 'pitch'
 
@@ -22,6 +24,7 @@ def parse_midi(filename):
     duration = []
 
     for part in instrument.partitionByInstrument(music).parts:
+        signature = part[meter.TimeSignature][0]
         # select elements of only piano
         if 'Piano' in str(part):
             notes_to_parse = part.recurse()
@@ -29,7 +32,6 @@ def parse_midi(filename):
             for element in notes_to_parse:
                 # notes
                 if isinstance(element, note.Note):
-                    pass
                     chords.append(str(element.pitch))
                     duration.append(element.quarterLength)
                 # chords
@@ -41,10 +43,10 @@ def parse_midi(filename):
                     chords.append(element.name)
                     duration.append(element.quarterLength)
 
-    return chords, duration
+    return chords, duration, signature
 
 
-def transition_matrix(transitions, order = 2):
+def transition_matrix(transitions):
     values, size = np.unique(transitions, return_counts=True)
     n = len(values)
 
@@ -57,20 +59,21 @@ def transition_matrix(transitions, order = 2):
 
     T = (M.T / M.sum(axis=1)).T
 
-    T = np.linalg.matrix_power(T, order)
+    # T = np.linalg.matrix_power(T, order)
 
     df = pd.DataFrame(T)  # convert to dataframe
 
     # Set axis labels
     df = df.set_axis(values)
     df = df.set_axis(values, axis=1)
-    
+
     return df
+
 
 def generate(df, length=400):
     cur = df.sample()
     notes = [cur.index.values[0]]
-    columns = list(df.columns.values)
+    columns = list(df.T.columns.values)
     for _ in range(length - 1):
         probs = cur.values.flatten().tolist()
         note_index = np.random.choice(cur.size, p=probs)
@@ -79,26 +82,25 @@ def generate(df, length=400):
         cur = df.loc[[note]]
     return notes
 
-chords, duration = parse_midi('midi/beethoven_hammerklavier_3.mid')
+
+chords, duration, signature = parse_midi('midi/brahms-waltz-15.mid')
 
 markov = transition_matrix(chords)
 markov_duration = transition_matrix(duration)
 
 notes = generate(markov)
-durations = generate(markov_duration)
-
-from music21.stream import Part
-from music21.midi.translate import streamToMidiFile
+durations = duration
 
 print('Converting to MIDI')
 part = Part()
+part.append(signature)
 for i in range(len(notes)):
     note = notes[i]
     duration = durations[i]
 
     if note == "rest":
-         part.append(Rest(quarterLength=duration))
-    else: 
+        part.append(Rest(quarterLength=duration))
+    else:
         part.append(Chord(note, quarterLength=duration))
 
 mf = streamToMidiFile(part)
@@ -106,3 +108,5 @@ mf = streamToMidiFile(part)
 mf.open('chords.mid', 'wb')
 mf.write()
 mf.close()
+
+os.system("timidity -Os chords.mid")
