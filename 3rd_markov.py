@@ -106,70 +106,22 @@ def generate(df, length=400):
     return notes
 
 
-chords, duration = parse_midi('midi/CLASSICAL_beemoonlightson.mid')
+chords, duration = parse_midi('midi/classical_bachminuet_in_g.mid')
 
 markov = transition_matrix(chords)
 
 notes = generate(markov)
 
-# rules = {"a": "b[a]b(a)a", "b": "bb"}
-rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
-
-
-rules = {"a" : "b[a[ba]]", "b" : "b((b)a)c" , "c" : "cd"}
-
-
-def lsystem(axiom, rules, n):
-    out = axiom
-    for _ in range(n):
-        pos = 0
-        for char in out:
-            if char in rules:
-                out = out[:pos] + rules[char] + out[pos + 1:]
-                pos += len(rules[char])
-            else:
-                pos += 1
-
-    return out
-
-
-def parse_lengths(tree, minium=0.5):
-    curr = tree[0]
-    length = minium
-    durations = []
-    direction = ""
-    m = 1
-    for i in range(1, len(tree)):
-        char = tree[i]
-        curr = tree[i - 1]
-        if char == "[" or curr == "(":
-            m = 2
-        elif char == "]" or curr == ")":
-            m = 3
-        if curr == char:
-            length += (minium * m)
-        else:
-            if length > 0:
-                durations.append(length)
-            length = minium
-
-    return durations
-
-
-tree = lsystem("abacd", rules, 8)
-
-durations = parse_lengths(tree)
-
 part = Part()
 # part.append(signature)
 for i in range(len(notes)):
     note = notes[i]
-    duration = durations[i]
+    #duration = durations[i]
 
     if note == "rest":
-        part.append(Rest(quarterLength=duration))
+        part.append(Rest(quarterLength=1))
     else:
-        part.append(Chord(note, quarterLength=duration))
+        part.append(Chord(note, quarterLength=1))
 
 mf = streamToMidiFile(part)
 
