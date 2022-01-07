@@ -17,7 +17,7 @@ print(f"Generating using seed: {seed}")
 np.random.seed(seed)
 
 # Extract the notes from midi file using midi helper
-midi_extraction = helper.Extract("midi/beethoven_hammerklavier_3.mid")
+midi_extraction = helper.Extract("midi/CLASSICAL_beemoonlightson.mid")
 midi_extraction.parse_midi()
 chords = midi_extraction.get_chords()
 duration = midi_extraction.get_durations()
@@ -61,7 +61,8 @@ class Markov:
 
         # Combine rows with same keys
         df = df.groupby(df.index).sum()
-        # calculate the total frequency of the each column
+
+        # calculate the total frequency each of the columns
         df['sum'] = df.sum(axis=1)
 
         # Calculate the probability of the transition occurring
