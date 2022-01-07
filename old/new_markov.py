@@ -83,7 +83,7 @@ def generate(df, length=400):
     return notes
 
 
-chords, duration, signature = parse_midi('midi/brahms-waltz-15.mid')
+chords, duration, signature = parse_midi('../midi/brahms-waltz-15.mid')
 
 markov = transition_matrix(chords)
 markov_duration = transition_matrix(duration)
@@ -105,7 +105,7 @@ for i in range(len(notes)):
 
 mf = streamToMidiFile(part)
 
-mf.open('chords.mid', 'wb')
+mf.open('../chords.mid', 'wb')
 mf.write()
 mf.close()
 

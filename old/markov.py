@@ -101,7 +101,7 @@ for i in range(len(notes)):
 
 mf = streamToMidiFile(part)
 
-mf.open('chords.mid', 'wb')
+mf.open('../chords.mid', 'wb')
 mf.write()
 mf.close()
 

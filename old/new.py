@@ -79,7 +79,7 @@ def transition_matrix(transitions):
     return df
 
 
-chords, duration = parse_midi('midi/classical_bachminuet_in_g.mid')
+chords, duration = parse_midi('../midi/classical_bachminuet_in_g.mid')
 
 print(chords)
 
@@ -171,7 +171,7 @@ for i in range(len(notes)):
 
 mf = streamToMidiFile(part)
 
-mf.open('chords.mid', 'wb')
+mf.open('../chords.mid', 'wb')
 mf.write()
 mf.close()
 

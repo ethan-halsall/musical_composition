@@ -3,11 +3,12 @@ import random
 
 import numpy as np
 import pandas as pd
-from music21 import *
 from music21.chord import Chord
 from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
 from music21.stream import Part
+
+import midi_helper as helper
 
 seed = random.randint(0, 2 ** 32 - 1)
 
@@ -15,35 +16,11 @@ print(f"Generating using seed: {seed}")
 
 np.random.seed(seed)
 
-
-def parse_midi(filename):
-    music = converter.parse(filename)
-    # chopin.plot('histogram', 'pitch'
-
-    chords = []
-    duration = []
-
-    for part in instrument.partitionByInstrument(music).parts:
-        # signature = part[meter.TimeSignature][0]
-        # select elements of only piano
-        if 'Piano' in str(part):
-            notes_to_parse = part.recurse()
-            # finding whether a particular element is note or a chord
-            for element in notes_to_parse:
-                # notes
-                if isinstance(element, note.Note):
-                    chords.append(str(element.pitch))
-                    duration.append(element.quarterLength)
-                # chords
-                elif isinstance(element, chord.Chord):
-                    chords.append(' '.join(str(n.pitch) for n in element))
-                    duration.append(element.quarterLength)
-                # rests
-                elif isinstance(element, note.Rest):
-                    chords.append(element.name)
-                    duration.append(element.quarterLength)
-
-    return chords, duration
+# Extract the notes from midi file using midi helper
+midi_extraction = helper.Extract("midi/beethoven_hammerklavier_3.mid")
+midi_extraction.parse_midi()
+chords = midi_extraction.get_chords()
+duration = midi_extraction.get_durations()
 
 
 class Markov:
@@ -55,14 +32,6 @@ class Markov:
         n = len(values)
 
         dict = {}
-
-        """for (w, x, y, z) in zip(transitions, transitions[1:], transitions[2:], transitions[3:]):
-            key = f"{w},{x},{y},{z}"
-            if key not in dict:
-                dict[key] = 1
-    
-            else:
-                dict[key] += 1"""
 
         for x in range(len(transitions)):
             if len(transitions[x:x + self.order + 1]) == self.order + 1:
@@ -102,7 +71,7 @@ class Markov:
         df = df.drop('sum', 1)
         return df
 
-    def generate(self, df, length=400):
+    def generate_sequence(self, df, length=400):
         cur = df.sample()
         notes = cur.index.values[0].split(",")
         columns = list(df.columns.values)
@@ -115,21 +84,16 @@ class Markov:
         return notes
 
 
-chords, duration = parse_midi('midi/mz_570_1.mid')
-
-
 markov_chain = Markov(3)
 
 markov = markov_chain.transition_matrix(chords)
 
-
-notes = markov_chain.generate(markov)
+notes = markov_chain.generate_sequence(markov)
 
 # rules = {"a": "b[a]b(a)a", "b": "bb"}
 rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
 
-
-rules = {"a" : "b[a[ba]]", "b" : "b((b)a)c" , "c" : "cdb"}
+rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cdb"}
 
 
 def lsystem(axiom, rules, n):
@@ -146,9 +110,9 @@ def lsystem(axiom, rules, n):
     return out
 
 
-def parse_lengths(tree, minium=0.5):
+def parse_lengths(tree, minimum=0.5):
     curr = tree[0]
-    length = minium
+    length = minimum
     durations = []
     direction = ""
     m = 1
@@ -160,18 +124,18 @@ def parse_lengths(tree, minium=0.5):
         elif char == "]" or curr == ")":
             m = 3
         if curr == char:
-            length += (minium * m)
+            length += (minimum * m)
         else:
             if length > 0:
                 durations.append(length)
-            length = minium
+            length = minimum
 
     return durations
 
 
 tree = lsystem("abacd", rules, 6)
 
-durations = parse_lengths(tree, minium=0.33)
+durations = parse_lengths(tree, minimum=0.33)
 
 part = Part()
 # part.append(signature)
