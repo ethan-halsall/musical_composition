@@ -1,4 +1,26 @@
 from music21 import converter, instrument, note, chord
+from music21.chord import Chord
+from music21.midi.translate import streamToMidiFile
+from music21.note import Rest
+from music21.stream import Part
+
+
+def write_to_midi(filename, notes, durations):
+    part = Part()
+    for i in range(len(notes)):
+        note = notes[i]
+        duration = durations[i]
+
+        if note == "rest":
+            part.append(Rest(quarterLength=duration))
+        else:
+            part.append(Chord(note, quarterLength=duration))
+
+    mf = streamToMidiFile(part)
+
+    mf.open(filename, 'wb')
+    mf.write()
+    mf.close()
 
 
 class Extract:
@@ -6,9 +28,10 @@ class Extract:
         self._filename = filename
         self._chords = []
         self._durations = []
+        self.stream = converter.parse(self._filename)
 
     def parse_midi(self, inst='Piano'):
-        music = converter.parse(self._filename)
+        music = self.stream
 
         for part in instrument.partitionByInstrument(music).parts:
             # signature = part[meter.TimeSignature][0]

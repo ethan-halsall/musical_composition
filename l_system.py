@@ -1,6 +1,6 @@
 rules = {"a": "b[a]b(a)a", "b": "bb"}
-rules = {"a": "d[dbe](dce)e", "b" : "d[daf](dcf)f", "c" : "d[dbg](dag)g"}
-rules = {"a" : "b[a[ba]]", "b" : "b((b)a)c" , "c" : "cd"}
+rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
+rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
 
 
 def lsystem(axiom, rules, n):
@@ -16,6 +16,7 @@ def lsystem(axiom, rules, n):
 
     return out
 
+
 def parse_lengths(tree):
     curr = tree[0]
     length = 0.33
@@ -30,8 +31,7 @@ def parse_lengths(tree):
 
     return durations
 
+
 tree = lsystem("a", rules, 4)
 
 durations = parse_lengths(tree)
-
-

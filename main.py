@@ -2,14 +2,10 @@ import os
 import random
 
 import numpy as np
-from music21.chord import Chord
-from music21.midi.translate import streamToMidiFile
-from music21.note import Rest
-from music21.stream import Part
 
 import midi_helper as helper
-from markov import Markov
 from l_system import lsystem, parse_lengths
+from markov import Markov
 
 seed = random.randint(0, 2 ** 32 - 1)
 
@@ -40,21 +36,7 @@ tree = lsystem("abacd", rules, 6)
 
 durations = parse_lengths(tree)
 
-part = Part()
-for i in range(len(notes)):
-    note = notes[i]
-    duration = durations[i]
-
-    if note == "rest":
-        part.append(Rest(quarterLength=duration))
-    else:
-        part.append(Chord(note, quarterLength=duration))
-
-mf = streamToMidiFile(part)
-
-mf.open('chords.mid', 'wb')
-mf.write()
-mf.close()
+helper.write_to_midi("chords.mid", notes, durations)
 
 # Play midi file using timidity binary
 os.system("timidity -Os chords.mid")
