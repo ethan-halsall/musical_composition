@@ -14,8 +14,15 @@ print(f"Generating using seed: {seed}")
 # Set numpy seed for random
 np.random.seed(seed)
 
+# Get a list of all files in the midi dir with the .mid extension
+files = [f for f in os.listdir('./midi') if f.endswith(".mid")]
+for count, f in enumerate(files):
+    print(f"{count + 1}: {f}")
+
+filename = files[int(input("Select file: ")) - 1]
+
 # Extract the notes from midi file using midi helper
-midi_extraction = helper.Extract("midi/brahms-waltz-15.mid")
+midi_extraction = helper.Extract(f"midi/{filename}")
 midi_extraction.parse_midi()
 chords = midi_extraction.get_chords()
 
@@ -35,7 +42,7 @@ tree = lsystem("abacd", rules, 7)
 
 durations = parse_lengths(tree)
 
-helper.write_to_midi("chords.mid", notes, durations)
+helper.write_to_midi(f"{filename[:-4]}_{seed}.mid", notes, durations)
 
 # Play midi file using timidity binary
-os.system("timidity -Os chords.mid")
+os.system(f"timidity -Os out/{filename[:-4]}_{seed}.mid")

@@ -18,7 +18,7 @@ def write_to_midi(filename, notes, durations):
 
     mf = streamToMidiFile(part)
 
-    mf.open(filename, 'wb')
+    mf.open(f"out/{filename}", 'wb')
     mf.write()
     mf.close()
 
