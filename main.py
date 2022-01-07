@@ -15,10 +15,9 @@ print(f"Generating using seed: {seed}")
 np.random.seed(seed)
 
 # Extract the notes from midi file using midi helper
-midi_extraction = helper.Extract("midi/brahms_opus1_1.mid")
+midi_extraction = helper.Extract("midi/brahms-waltz-15.mid")
 midi_extraction.parse_midi()
 chords = midi_extraction.get_chords()
-duration = midi_extraction.get_durations()
 
 # Generate markov chain
 markov_chain = Markov(3)
@@ -32,7 +31,7 @@ rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
 
 rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cdb"}
 
-tree = lsystem("abacd", rules, 6)
+tree = lsystem("abacd", rules, 7)
 
 durations = parse_lengths(tree)
 
