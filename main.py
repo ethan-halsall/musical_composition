@@ -9,6 +9,7 @@ from music21.stream import Part
 
 import midi_helper as helper
 from markov import Markov
+from l_system import lsystem, parse_lengths
 
 seed = random.randint(0, 2 ** 32 - 1)
 
@@ -18,12 +19,12 @@ print(f"Generating using seed: {seed}")
 np.random.seed(seed)
 
 # Extract the notes from midi file using midi helper
-midi_extraction = helper.Extract("midi/CLASSICAL_beemoonlightson.mid")
+midi_extraction = helper.Extract("midi/brahms_opus1_1.mid")
 midi_extraction.parse_midi()
 chords = midi_extraction.get_chords()
 duration = midi_extraction.get_durations()
 
-# Generate markov chain of order 3
+# Generate markov chain
 markov_chain = Markov(3)
 markov = markov_chain.transition_matrix(chords)
 
@@ -35,47 +36,9 @@ rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
 
 rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cdb"}
 
-
-def lsystem(axiom, rules, n):
-    out = axiom
-    for _ in range(n):
-        pos = 0
-        for char in out:
-            if char in rules:
-                out = out[:pos] + rules[char] + out[pos + 1:]
-                pos += len(rules[char])
-            else:
-                pos += 1
-
-    return out
-
-
-def parse_lengths(tree, minimum=0.5):
-    curr = tree[0]
-    length = minimum
-    durations = []
-    direction = ""
-    m = 1
-    for i in range(1, len(tree)):
-        char = tree[i]
-        curr = tree[i - 1]
-        if char == "[" or curr == "(":
-            m = 2
-        elif char == "]" or curr == ")":
-            m = 3
-        if curr == char:
-            length += (minimum * m)
-        else:
-            if length > 0:
-                durations.append(length)
-            length = minimum
-
-    return durations
-
-
 tree = lsystem("abacd", rules, 6)
 
-durations = parse_lengths(tree, minimum=0.33)
+durations = parse_lengths(tree)
 
 part = Part()
 for i in range(len(notes)):
