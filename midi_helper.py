@@ -30,6 +30,13 @@ class Extract:
         self._durations = []
         self.stream = converter.parse(self._filename)
 
+    def write(self):
+        conv = converter.subConverters.ConverterLilypond()
+        conv.write(self.stream, fmt='lilypond', fp="text", subformats=['pdf'])
+
+    def get_key(self):
+        self.stream.analyze('key')
+
     def parse_midi(self, inst='Piano'):
         music = self.stream
 

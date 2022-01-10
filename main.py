@@ -2,10 +2,13 @@ import os
 import random
 
 import numpy as np
+from music21 import environment
 
 import midi_helper as helper
 from l_system import lsystem, parse_lengths
 from markov import Markov
+
+#us['midiPath'] = '/path/to/midi/program'
 
 seed = random.randint(0, 2 ** 32 - 1)
 
