@@ -1,8 +1,11 @@
+import os
+
 from music21 import converter, instrument, note, chord
 from music21.chord import Chord
 from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
 from music21.stream import Part
+from shutil import move
 
 
 def write_to_midi(filename, notes, durations):
@@ -32,7 +35,8 @@ class Extract:
 
     def write(self):
         conv = converter.subConverters.ConverterLilypond()
-        conv.write(self.stream, fmt='lilypond', fp="text", subformats=['pdf'])
+        conv.write(self.stream, fmt='lilypond', fp=self._filename, subformats=['pdf'])
+        move(f"{self._filename}.pdf", f"pdf/{self._filename[5:]}.pdf")
 
     def get_key(self):
         self.stream.analyze('key')
