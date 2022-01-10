@@ -28,7 +28,7 @@ class Window:
         # Get a list of all files in the midi dir with the .mid extension
         files = [f for f in os.listdir('./midi') if f.endswith(".mid")]
         for count, file in enumerate(files):
-            self.lb.insert(count,file)
+            self.lb.insert(count, file)
 
         tk.Button(self.window, text='Generate music', command=self.generate_music).pack(pady=20)
         self.show = tk.Label(self.window)
@@ -65,8 +65,8 @@ class Window:
         if not self.thread.is_alive():
             filename = self.lb.get(tk.ANCHOR)
             self.show.config(text=f"Generating music based on {filename}")
-            thread = threading.Thread(target=self.gen, args=[filename])
-            thread.start()
+            self.thread = threading.Thread(target=self.gen, args=[filename])
+            self.thread.start()
         else:
             messagebox.showerror('Error', 'Cannot do multiple generations at the same time')
 
