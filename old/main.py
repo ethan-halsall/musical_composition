@@ -8,7 +8,7 @@ import midi_helper as helper
 from l_system import lsystem, parse_lengths
 from markov import Markov
 
-#us['midiPath'] = '/path/to/midi/program'
+"""# us['midiPath'] = '/path/to/midi/program'
 
 seed = random.randint(0, 2 ** 32 - 1)
 
@@ -28,6 +28,9 @@ filename = files[int(input("Select file: ")) - 1]
 midi_extraction = helper.Extract(f"midi/{filename}")
 midi_extraction.parse_midi()
 chords = midi_extraction.get_chords()
+values, size = midi_extraction.get_frequency()
+print(values)
+print(size)
 
 # Generate markov chain
 markov_chain = Markov(3)
@@ -48,4 +51,10 @@ durations = parse_lengths(tree)
 helper.write_to_midi(f"{filename[:-4]}_{seed}.mid", notes, durations)
 
 # Play midi file using timidity binary
-os.system(f"timidity -Os out/{filename[:-4]}_{seed}.mid")
+# os.system(f"timidity -Os out/{filename[:-4]}_{seed}.mid")"""
+test = helper.Extract("../out/ty_januar_64849935.mid")
+test.parse_midi()
+print(test.get_chords())
+values, size = test.get_frequency()
+print(values)
+print(size)
