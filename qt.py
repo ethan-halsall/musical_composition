@@ -27,7 +27,13 @@ class Worker(QRunnable):
         markov = markov_chain.transition_matrix(chords)
 
         # Generate a sequence of notes using the markov chain
-        notes = markov_chain.generate_sequence(markov)
+        success = False
+        while not success:
+            try:
+                notes = markov_chain.generate_sequence(markov)
+                success = True
+            except Exception as e:
+                print(e)
 
         # rules = {"a": "b[a]b(a)a", "b": "bb"}
         rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}

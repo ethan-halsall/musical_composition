@@ -41,14 +41,9 @@ class Markov:
         # Combine rows with same keys
         df = df.groupby(df.index).sum()
 
-        # calculate the total frequency each of the columns
-        df['sum'] = df.sum(axis=1)
+        # normalise rows by sum
+        df = df.div(df.sum(axis=1), axis=0)
 
-        # Calculate the probability of the transition occurring
-        df = df.div(df['sum'], axis=0)
-
-        # Drop the sum column
-        df = df.drop('sum', 1)
         return df
 
     def generate_sequence(self, df, length=400):
