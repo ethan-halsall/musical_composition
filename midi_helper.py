@@ -6,10 +6,12 @@ from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
 from music21.stream import Part
 from shutil import move
+import numpy as np
 
 
 def write_to_midi(filename, notes, durations):
     part = Part()
+    part.append(instrument.Piano())
     for i in range(len(notes)):
         note = notes[i]
         duration = durations[i]
