@@ -10,29 +10,29 @@ class Markov:
         values, size = np.unique(transitions, return_counts=True)
         n = len(values)
 
-        dict = {}
+        sequences = {}
 
         for x in range(len(transitions)):
             if len(transitions[x:x + self.order + 1]) == self.order + 1:
                 key = ",".join(transitions[x:x + self.order + 1])
-                if key not in dict:
-                    dict[key] = 1
+                if key not in sequences:
+                    sequences[key] = 1
 
                 else:
-                    dict[key] += 1
+                    sequences[key] += 1
 
-        M = np.zeros((len(dict), n), int)
+        m = np.zeros((len(sequences), n), int)
 
         states = []
 
-        for i, (key, value) in enumerate(dict.items()):
+        for i, (key, value) in enumerate(sequences.items()):
             splits = key.split(",")
             column = splits[self.order]
             j = np.where(values == column)[0][0]
-            M[i][j] = value
+            m[i][j] = value
             states.append(",".join(splits[:self.order]))
 
-        df = pd.DataFrame(M)  # convert to dataframe
+        df = pd.DataFrame(m)  # convert to dataframe
 
         # Set axis labels
         df = df.set_axis(states)
