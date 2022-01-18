@@ -1,37 +1,73 @@
+import string
+import turtle
+
+rules = {"a": "b", "b": "(a)[b]"}
 rules = {"a": "b[a]b(a)a", "b": "bb"}
-rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
-rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
+#rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
+rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
+#rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
 
 
 def lsystem(axiom, rules, n):
-    out = axiom
-    for _ in range(n):
-        pos = 0
-        for char in out:
-            if char in rules:
-                out = out[:pos] + rules[char] + out[pos + 1:]
-                pos += len(rules[char])
-            else:
-                pos += 1
-
+    out = ""
+    for char in axiom:
+        if char in rules:
+            out += rules[char]
+        else:
+            out += char
+    n -= 1
+    if n > 0:
+        return lsystem(out, rules, n)
     return out
 
 
-def parse_lengths(tree):
-    curr = tree[0]
-    length = 0.33
-    durations = []
-    for char in tree:
-        if curr == char:
-            length += 0.33
-        else:
-            if length > 0:
-                durations.append(length)
-            length = 0
+def parse_lengths(tree, length=0.14):
+    durations = [length]
+    for op in tree:
+        if op.isalpha():
+            durations[len(durations) - 1] += length
+        elif op == "(":
+            durations.append(length)
+        elif op == "[":
+            durations.append(length)
 
     return durations
 
 
-tree = lsystem("a", rules, 4)
+"""tree = lsystem("a", rules, 7)
 
-durations = parse_lengths(tree)
+
+gen = turtle.Turtle()
+gen.speed(0)
+gen.left(90)
+size = 10
+positions = []
+turtle.tracer(0, 0)
+
+durations = [0.33]
+length = 0.33
+
+for op in tree:
+    if op.isalpha():
+        gen.forward(size)
+        durations[len(durations) - 1] += length
+    elif op == "(":
+        durations.append(length)
+        positions.append(gen.position())
+        gen.left(size)
+    elif op == ")":
+        gen.setposition(positions.pop())
+        gen.right(size)
+    elif op == "[":
+        durations.append(length)
+        positions.append(gen.position())
+        gen.right(size)
+    elif op == "]":
+        gen.setposition(positions.pop())
+        gen.left(size)
+
+
+print(durations)
+
+turtle.mainloop()
+turtle.exitonclick()"""

@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 import sys
 
 import midi_helper as helper
-import l_system
+from l_system import lsystem, parse_lengths
 from markov import Markov
 
 
@@ -35,14 +35,17 @@ class Worker(QRunnable):
             except Exception as e:
                 print(e)
 
-        # rules = {"a": "b[a]b(a)a", "b": "bb"}
+        rules = {"a": "b", "b": "(a)[b]"}
+        rules = {"a": "b[a]b(a)a", "b": "bb"}
         rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
+        #rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
+        #rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
 
-        rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cdb"}
+        tree = lsystem("a", rules, 8)
 
-        tree = l_system.lsystem("abacd", rules, 7)
+        durations = parse_lengths(tree)
 
-        durations = l_system.parse_lengths(tree)
+        print(durations)
 
         helper.write_to_midi(f"{self.filename[:-4]}_{self.seed}.mid", notes, durations)
 
