@@ -125,21 +125,19 @@ class Window(QWidget):
         except IndexError as e:
             return
         sequence = self.database.to_lst(json_sequence)
-        part = Part()
-        for block in sequence:
-            part = Part()
-            part.append(instrument.Piano())
-            for i in range(len(block)):
-                note = block[i]
 
-                if note == "rest":
-                    part.append(Rest(quarterLength=1))
-                else:
-                    part.append(Chord(note, quarterLength=1))
-            break
+        block = sequence[0]
+        part = Part()
+        part.append(instrument.Piano())
+        for i in range(len(block)):
+            note = block[i]
+            if note == "rest":
+                part.append(Rest(quarterLength=1))
+            else:
+                part.append(Chord(note, quarterLength=1))
         plot = part.plot(doneAction=None)
         sc = MplCanvas(plot.figure)
-        self.layout.addWidget(sc,0, 2)
+        self.layout.addWidget(sc, 0, 2)
 
     def on_button_sequence(self):
         if self.threadpool.activeThreadCount() == 0:
