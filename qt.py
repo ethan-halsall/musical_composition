@@ -12,7 +12,7 @@ from random import randint, choice
 import itertools
 
 
-class Worker(QRunnable):
+class SequenceWorker(QRunnable):
     def __init__(self, items, database):
         super().__init__()
         self.database = database
@@ -48,23 +48,23 @@ class Worker(QRunnable):
 
             self.database.insert(filename, self.database.to_json(blocks))
 
-        notes = [choice(blocks) for x in range(50)]
+        # notes = [choice(blocks) for x in range(50)]
 
         # rules = {"a": "b", "b": "(a)[b]"}
         # rules = {"a": "b[a]b(a)a", "b": "bb"}
         # rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
-        rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
+        # rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
         # rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
 
-        tree = lsystem("a", rules, 8)
-        durations = parse_lengths(tree)
+        # tree = lsystem("a", rules, 8)
+        # durations = parse_lengths(tree)
         # print(durations)
-        self.filename = "mozasasaassaas"
-        helper.write_to_midi(f"{self.filename[:-4]}_{self.seed}.mid", list(itertools.chain.from_iterable(notes)),
-                             durations)
+        # self.filename = "mozasasaassaas"
+        # helper.write_to_midi(f"{self.filename[:-4]}_{self.seed}.mid", list(itertools.chain.from_iterable(notes)),
+        #                     durations)
 
         # Play midi file using timidity binary
-        os.system(f"timidity -Os out/{self.filename[:-4]}_{self.seed}.mid")
+        # os.system(f"timidity -Os out/{self.filename[:-4]}_{self.seed}.mid")
 
 
 class Window(QWidget):
@@ -83,25 +83,32 @@ class Window(QWidget):
         for count, file in enumerate(files):
             self.list_widget.insertItem(count, file)
         self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
-        layout.addWidget(self.list_widget)
+        layout.addWidget(self.list_widget, 0, 0, 1, 2)
+
+        self.button_sequence = QPushButton()
+        self.button_sequence.setText("Generate sequences")
+        self.button_sequence.clicked.connect(self.on_button_sequence)
+        layout.addWidget(self.button_sequence, 1, 0)
 
         self.button_generate = QPushButton()
-        self.button_generate.setText("Generate")
-        self.button_generate.clicked.connect(self.generate)
-        layout.addWidget(self.button_generate)
+        self.button_generate.setText("Generate music")
+        self.button_generate.clicked.connect(self.on_button_generate)
+        layout.addWidget(self.button_generate, 1, 1)
 
         # Create a database object on a background thread
         self.database = DatabaseWorker()
         self.threadpool.start(self.database)
 
-    def generate(self):
+    def on_button_sequence(self):
         if self.threadpool.activeThreadCount() == 0:
             items = self.list_widget.selectedItems()
-            print(items)
-            worker = Worker(items, self.database)
+            worker = SequenceWorker(items, self.database)
             self.threadpool.start(worker)
         else:
             print("Worker already running")
+
+    def on_button_generate(self):
+        print("wew")
 
 
 app = QApplication(sys.argv)
