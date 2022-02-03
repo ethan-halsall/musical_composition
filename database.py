@@ -33,7 +33,7 @@ class Database:
     def create_connection(self):
         conn = None
         try:
-            conn = sqlite3.connect(self.path)
+            conn = sqlite3.connect(self.path, check_same_thread=False) #nasty hack
         except Error as e:
             print(e)
 
@@ -75,6 +75,11 @@ class Database:
                 self._insert(update_query, update_params)
             except Error as e:
                 print(e)
+
+    def get_sequence(self, filename):
+        rows = self._fetch(
+            "SELECT sequences FROM Sequence WHERE filename=?", (filename,))
+        return rows[0][0]
 
     @staticmethod
     def to_json(lst):

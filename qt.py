@@ -4,6 +4,13 @@ from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool
 from PyQt5.QtWidgets import *
 import sys
 
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+from music21 import instrument
+from music21.chord import Chord
+from music21.note import Rest
+from music21.stream import Part
+
 import midi_helper as helper
 from database import DatabaseWorker
 from l_system import lsystem, parse_lengths
@@ -67,11 +74,18 @@ class SequenceWorker(QRunnable):
         # os.system(f"timidity -Os out/{self.filename[:-4]}_{self.seed}.mid")
 
 
+class MplCanvas(FigureCanvasQTAgg):
+
+    def __init__(self, figure):
+        fig = figure
+        super(MplCanvas, self).__init__(fig)
+
+
 class Window(QWidget):
     def __init__(self):
         QWidget.__init__(self)
-        layout = QGridLayout()
-        self.setLayout(layout)
+        self.layout = QGridLayout()
+        self.setLayout(self.layout)
         self.list_widget = QListWidget()
         self.window().resize(500, 500)
 
@@ -83,21 +97,49 @@ class Window(QWidget):
         for count, file in enumerate(files):
             self.list_widget.insertItem(count, file)
         self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
-        layout.addWidget(self.list_widget, 0, 0, 1, 2)
+        self.layout.addWidget(self.list_widget, 0, 0, 1, 2)
 
         self.button_sequence = QPushButton()
         self.button_sequence.setText("Generate sequences")
         self.button_sequence.clicked.connect(self.on_button_sequence)
-        layout.addWidget(self.button_sequence, 1, 0)
+        self.layout.addWidget(self.button_sequence, 1, 0)
 
         self.button_generate = QPushButton()
         self.button_generate.setText("Generate music")
         self.button_generate.clicked.connect(self.on_button_generate)
-        layout.addWidget(self.button_generate, 1, 1)
+        self.layout.addWidget(self.button_generate, 1, 1)
+
+        self.list_widget.clicked.connect(self.clicked)
 
         # Create a database object on a background thread
         self.database = DatabaseWorker()
         self.threadpool.start(self.database)
+
+        # sc = MplCanvas(self, figure)
+        # layout.addWidget(sc)
+
+    def clicked(self, qmodelindex):
+        item = self.list_widget.currentItem()
+        try:
+            json_sequence = self.database.get_sequence(item.text())
+        except IndexError as e:
+            return
+        sequence = self.database.to_lst(json_sequence)
+        part = Part()
+        for block in sequence:
+            part = Part()
+            part.append(instrument.Piano())
+            for i in range(len(block)):
+                note = block[i]
+
+                if note == "rest":
+                    part.append(Rest(quarterLength=1))
+                else:
+                    part.append(Chord(note, quarterLength=1))
+            break
+        plot = part.plot(doneAction=None)
+        sc = MplCanvas(plot.figure)
+        self.layout.addWidget(sc,0, 2)
 
     def on_button_sequence(self):
         if self.threadpool.activeThreadCount() == 0:
