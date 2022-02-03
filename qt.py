@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import *
 import sys
 
 import midi_helper as helper
+from database import DatabaseWorker
 from l_system import lsystem, parse_lengths
 from markov import Markov
 from random import randint, choice
@@ -12,10 +13,11 @@ import itertools
 
 
 class Worker(QRunnable):
-    def __init__(self, items, seed=1):
+    def __init__(self, items, database):
         super().__init__()
+        self.database = database
         self.items = items
-        self.seed = seed
+        self.seed = 0
 
     @pyqtSlot()
     def run(self):
@@ -31,7 +33,7 @@ class Worker(QRunnable):
             markov_chain = Markov(3)
             markov = markov_chain.transition_matrix(chords)
 
-            # Generate 50 sequence of notes using the markov chain
+            # Generate 15 sequence of notes using the markov chain
             for _ in range(15):
                 success = False
                 while not success:
@@ -44,13 +46,15 @@ class Worker(QRunnable):
                     except Exception as e:
                         print(e)
 
+            self.database.insert(filename, self.database.to_json(blocks))
+
         notes = [choice(blocks) for x in range(50)]
 
         # rules = {"a": "b", "b": "(a)[b]"}
         # rules = {"a": "b[a]b(a)a", "b": "bb"}
         # rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
         rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
-        #rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
+        # rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
 
         tree = lsystem("a", rules, 8)
         durations = parse_lengths(tree)
@@ -78,10 +82,7 @@ class Window(QWidget):
         files = [f for f in os.listdir('./midi') if f.endswith(".mid")]
         for count, file in enumerate(files):
             self.list_widget.insertItem(count, file)
-
         self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
-
-        # self.listwidget.clicked.connect(self.clicked)
         layout.addWidget(self.list_widget)
 
         self.button_generate = QPushButton()
@@ -89,15 +90,15 @@ class Window(QWidget):
         self.button_generate.clicked.connect(self.generate)
         layout.addWidget(self.button_generate)
 
-    def clicked(self, qmodelindex):
-        items = self.list_widget.currentItems()
-        print(items.text())
+        # Create a database object on a background thread
+        self.database = DatabaseWorker()
+        self.threadpool.start(self.database)
 
     def generate(self):
         if self.threadpool.activeThreadCount() == 0:
             items = self.list_widget.selectedItems()
             print(items)
-            worker = Worker(items)
+            worker = Worker(items, self.database)
             self.threadpool.start(worker)
         else:
             print("Worker already running")
