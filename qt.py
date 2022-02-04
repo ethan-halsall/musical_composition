@@ -1,6 +1,7 @@
 import os
+import traceback
 
-from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool
+from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, QObject, pyqtSignal
 from PyQt5.QtWidgets import *
 import sys
 
@@ -19,9 +20,17 @@ from random import randint, choice
 import itertools
 
 
+class WorkerSignals(QObject):
+    finished = pyqtSignal(str)
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+    progress = pyqtSignal(int)
+
+
 class SequenceWorker(QRunnable):
     def __init__(self, items, database):
         super().__init__()
+        self.signals = WorkerSignals()
         self.database = database
         self.items = items
         self.seed = 0
@@ -29,31 +38,38 @@ class SequenceWorker(QRunnable):
     @pyqtSlot()
     def run(self):
         blocks = []
-        for item in self.items:
-            filename = item.text()
-            # Extract the notes from midi file using midi helper
-            midi_extraction = helper.Extract(f"midi/{filename}")
-            midi_extraction.parse_midi()
-            chords = midi_extraction.get_chords()
+        try:
+            for item in self.items:
+                filename = item.text()
+                # Extract the notes from midi file using midi helper
+                midi_extraction = helper.Extract(f"midi/{filename}")
+                midi_extraction.parse_midi()
+                chords = midi_extraction.get_chords()
 
-            # Generate markov chain
-            markov_chain = Markov(3)
-            markov = markov_chain.transition_matrix(chords)
+                # Generate markov chain
+                markov_chain = Markov(3)
+                markov = markov_chain.transition_matrix(chords)
 
-            # Generate 15 sequence of notes using the markov chain
-            for _ in range(15):
-                success = False
-                while not success:
-                    try:
-                        # Generate a segment of length some power 2^n
-                        length = 2 ** randint(2, 3)
-                        notes = markov_chain.generate_sequence(markov, length=length)
-                        blocks.append(notes)
-                        success = True
-                    except Exception as e:
-                        print(e)
+                # Generate 15 sequence of notes using the markov chain
+                for _ in range(15):
+                    success = False
+                    while not success:
+                        try:
+                            # Generate a segment of length some power 2^n
+                            length = 2 ** randint(2, 3)
+                            notes = markov_chain.generate_sequence(markov, length=length)
+                            blocks.append(notes)
+                            success = True
+                        except Exception as e:
+                            print(e)
 
-            self.database.insert(filename, self.database.to_json(blocks))
+                self.database.insert(filename, self.database.to_json(blocks))
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        finally:
+            self.signals.finished.emit(item.text())  # Done
 
         # notes = [choice(blocks) for x in range(50)]
 
@@ -87,7 +103,9 @@ class Window(QWidget):
         self.layout = QGridLayout()
         self.setLayout(self.layout)
         self.list_widget = QListWidget()
-        self.window().resize(500, 500)
+        self.window().resize(1280, 720)
+
+        self.sequence_generating = False
 
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -120,11 +138,16 @@ class Window(QWidget):
 
     def clicked(self, qmodelindex):
         item = self.list_widget.currentItem()
+        self.draw_graph(item.text())
+
+    def draw_graph(self, filename):
+        database = DatabaseWorker()
+        self.threadpool.start(database)
         try:
-            json_sequence = self.database.get_sequence(item.text())
+            json_sequence = database.get_sequence(filename)
         except IndexError as e:
             return
-        sequence = self.database.to_lst(json_sequence)
+        sequence = database.to_lst(json_sequence)
 
         block = sequence[0]
         part = Part()
@@ -139,11 +162,17 @@ class Window(QWidget):
         sc = MplCanvas(plot.figure)
         self.layout.addWidget(sc, 0, 2)
 
+    def thread_complete(self, filename):
+        self.sequence_generating = False
+        self.draw_graph(filename)
+
     def on_button_sequence(self):
-        if self.threadpool.activeThreadCount() == 0:
+        if not self.sequence_generating:
             items = self.list_widget.selectedItems()
             worker = SequenceWorker(items, self.database)
             self.threadpool.start(worker)
+            worker.signals.finished.connect(self.thread_complete)
+            self.sequence_generating = True
         else:
             print("Worker already running")
 

@@ -33,7 +33,7 @@ class Database:
     def create_connection(self):
         conn = None
         try:
-            conn = sqlite3.connect(self.path, check_same_thread=False) #nasty hack
+            conn = sqlite3.connect(self.path)
         except Error as e:
             print(e)
 
