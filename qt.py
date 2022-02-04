@@ -1,23 +1,15 @@
 import os
+import sys
 import traceback
+from random import randint
 
 from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, QObject, pyqtSignal
 from PyQt5.QtWidgets import *
-import sys
-
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
-from music21 import instrument
-from music21.chord import Chord
-from music21.note import Rest
-from music21.stream import Part
 
 import midi_helper as helper
 from database import DatabaseWorker
-from l_system import lsystem, parse_lengths
 from markov import Markov
-from random import randint, choice
-import itertools
 
 
 class WorkerSignals(QObject):
@@ -90,6 +82,22 @@ class SequenceWorker(QRunnable):
         # os.system(f"timidity -Os out/{self.filename[:-4]}_{self.seed}.mid")
 
 
+class PlayMidiWorker(QRunnable):
+    def __init__(self, segment: helper.Segment):
+        super().__init__()
+        self.current_segment = segment
+        self.signals = WorkerSignals()
+
+    def run(self) -> None:
+        try:
+            self.current_segment.play()
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        finally:
+            self.signals.finished.emit("")
+
 class MplCanvas(FigureCanvasQTAgg):
 
     def __init__(self, figure):
@@ -105,7 +113,9 @@ class Window(QWidget):
         self.list_widget = QListWidget()
         self.window().resize(1280, 720)
 
+        self.current_segment = None
         self.sequence_generating = False
+        self.now_playing = False
 
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -146,6 +156,12 @@ class Window(QWidget):
         self.indicator.setText("0/0")
         self.layout.addWidget(self.indicator, 1, 7)
 
+        # Create button for going to next graph
+        self.button_play = QPushButton()
+        self.button_play.setText("Play")
+        self.button_play.clicked.connect(self.play)
+        self.layout.addWidget(self.button_play, 1, 6)
+
         # Create a database object on a background thread
         self.database = DatabaseWorker()
         self.threadpool.start(self.database)
@@ -173,21 +189,26 @@ class Window(QWidget):
             return
         sequence = database.to_lst(json_sequence)
 
-        block = sequence[pos]
-        part = Part()
-        part.append(instrument.Piano())
-        for i in range(len(block)):
-            note = block[i]
-            if note == "rest":
-                part.append(Rest(quarterLength=1))
-            else:
-                part.append(Chord(note, quarterLength=1))
-        plot = part.plot(doneAction=None)
-        sc = MplCanvas(plot.figure)
-        self.layout.addWidget(sc, 0, 2, 1, 8)
-        self.indicator.setText(f"{self.graph_positions[filename] + 1}/{len(sequence)}")
+        if len(sequence) > pos >= 0:
+            segment = helper.Segment(sequence[pos], filename, pos)
+            part = segment.part
+            plot = part.plot(doneAction=None)
+            sc = MplCanvas(plot.figure)
+            self.layout.addWidget(sc, 0, 2, 1, 8)
+            self.indicator.setText(f"{self.graph_positions[filename] + 1}/{len(sequence)}")
+            self.current_segment = segment
 
-    def thread_complete(self, filename):
+    def play(self):
+        if self.current_segment is not None and not self.now_playing:
+            worker = PlayMidiWorker(self.current_segment)
+            self.threadpool.start(worker)
+            worker.signals.finished.connect(self.playing_complete)
+            self.now_playing = True
+
+    def playing_complete(self):
+        self.now_playing = False
+
+    def sequence_complete(self, filename):
         self.sequence_generating = False
         self.draw_graph(filename)
 
@@ -196,7 +217,7 @@ class Window(QWidget):
             items = self.list_widget.currentItem()
             worker = SequenceWorker(items, self.database)
             self.threadpool.start(worker)
-            worker.signals.finished.connect(self.thread_complete)
+            worker.signals.finished.connect(self.sequence_complete)
             self.sequence_generating = True
         else:
             print("Worker already running")

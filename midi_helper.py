@@ -1,31 +1,45 @@
 import os
+from shutil import move
 
 from music21 import converter, instrument, note, chord
 from music21.chord import Chord
 from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
 from music21.stream import Part
-from shutil import move
-import numpy as np
 
 
-def write_to_midi(filename, notes, durations):
-    part = Part()
-    part.append(instrument.Piano())
-    for i in range(len(notes)):
-        note = notes[i]
-        duration = durations[i]
+class Segment:
+    def __init__(self, segment, filename, index):
+        self.segment = segment
+        self.filename = filename
+        self.index = index
+        self.part = self.to_part()
 
-        if note == "rest":
-            part.append(Rest(quarterLength=duration))
-        else:
-            part.append(Chord(note, quarterLength=duration))
+    def to_part(self):
+        part = Part()
+        part.append(instrument.Piano())
+        for i in range(len(self.segment)):
+            note = self.segment[i]
+            # duration = durations[i]
 
-    mf = streamToMidiFile(part)
+            if note == "rest":
+                part.append(Rest(quarterLength=1))
+            else:
+                part.append(Chord(note, quarterLength=1))
 
-    mf.open(f"out/{filename}", 'wb')
-    mf.write()
-    mf.close()
+        return part
+
+    def write_to_midi(self):
+        mf = streamToMidiFile(self.part)
+
+        mf.open(f"tmp/{self.filename}_{self.index}", 'wb')
+        mf.write()
+        mf.close()
+
+    def play(self):
+        # Play midi file using timidity binary
+        self.write_to_midi()
+        os.system(f"timidity -Os tmp/{self.filename}_{self.index}")
 
 
 class Extract:
