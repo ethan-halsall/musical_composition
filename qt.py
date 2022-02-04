@@ -98,6 +98,7 @@ class PlayMidiWorker(QRunnable):
         finally:
             self.signals.finished.emit("")
 
+
 class MplCanvas(FigureCanvasQTAgg):
 
     def __init__(self, figure):

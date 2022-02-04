@@ -13,9 +13,9 @@ class Segment:
         self.segment = segment
         self.filename = filename
         self.index = index
-        self.part = self.to_part()
+        self.part = self.__to_part()
 
-    def to_part(self):
+    def __to_part(self):
         part = Part()
         part.append(instrument.Piano())
         for i in range(len(self.segment)):
@@ -31,7 +31,6 @@ class Segment:
 
     def write_to_midi(self):
         mf = streamToMidiFile(self.part)
-
         mf.open(f"tmp/{self.filename}_{self.index}", 'wb')
         mf.write()
         mf.close()
@@ -40,6 +39,9 @@ class Segment:
         # Play midi file using timidity binary
         self.write_to_midi()
         os.system(f"timidity -Os tmp/{self.filename}_{self.index}")
+
+        # Remove temporary midi file from /tmp
+        os.remove(f"tmp/{self.filename}_{self.index}")
 
 
 class Extract:
