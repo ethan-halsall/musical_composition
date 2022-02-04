@@ -130,15 +130,21 @@ class Window(QWidget):
         self.button_generate.clicked.connect(self.on_button_generate)
         self.layout.addWidget(self.button_generate, 1, 1)
 
+        # Create button for going to previous graph
         self.button_previous = QPushButton()
         self.button_previous.setText("Prev")
         self.button_previous.clicked.connect(self.prev_graph)
         self.layout.addWidget(self.button_previous, 1, 8)
 
+        # Create button for going to next graph
         self.button_forward = QPushButton()
         self.button_forward.setText("Next")
         self.button_forward.clicked.connect(self.next_graph)
         self.layout.addWidget(self.button_forward, 1, 9)
+
+        self.indicator = QLabel()
+        self.indicator.setText("0/0")
+        self.layout.addWidget(self.indicator, 1, 7)
 
         # Create a database object on a background thread
         self.database = DatabaseWorker()
@@ -179,6 +185,7 @@ class Window(QWidget):
         plot = part.plot(doneAction=None)
         sc = MplCanvas(plot.figure)
         self.layout.addWidget(sc, 0, 2, 1, 8)
+        self.indicator.setText(f"{self.graph_positions[filename] + 1}/{len(sequence)}")
 
     def thread_complete(self, filename):
         self.sequence_generating = False
