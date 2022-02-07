@@ -114,7 +114,9 @@ class Window(QWidget):
         self.list_widget = QListWidget()
         self.window().resize(1280, 720)
 
+        self.current_segments = None
         self.current_segment = None
+        self.current_row = 0
         self.sequence_generating = False
         self.now_playing = False
         self.sequences = []
@@ -174,61 +176,59 @@ class Window(QWidget):
         self.threadpool.start(self.database)
 
     def click_box_listener(self):
-        item = self.list_widget.currentItem().text()
-        database = DatabaseWorker()
-        self.threadpool.start(database)
-        try:
-            json_sequence = database.get_sequence(item)
-        except IndexError as e:
-            return
-        sequence = database.to_lst(json_sequence)
-
-        pos = self.graph_positions[item]
-
+        segment = self.current_segment.get_segment()
         if self.click_box.isChecked():
-            self.sequences.append(sequence[pos])
+            self.sequences.append(segment)
         else:
-            self.sequences.remove(sequence[pos])
+            self.sequences.remove(segment)
 
         print(self.sequences)
 
     def next_graph(self):
         item = self.list_widget.currentItem().text()
-        self.graph_positions[item] += 1
-        self.draw_graph(item, pos=self.graph_positions[item])
+        new_pos = self.graph_positions[item] + 1
+        if new_pos < len(self.current_segments):
+            self.graph_positions[item] += 1
+            self.draw_graph(item, pos=self.graph_positions[item])
 
     def prev_graph(self):
         item = self.list_widget.currentItem().text()
-        self.graph_positions[item] -= 1
-        self.draw_graph(item, pos=self.graph_positions[item])
+        new_pos = self.graph_positions[item] - 1
+        if new_pos >= 0:
+            self.graph_positions[item] -= 1
+            self.draw_graph(item, pos=self.graph_positions[item])
 
     def clicked(self):
         item = self.list_widget.currentItem()
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        database = DatabaseWorker()
-        self.threadpool.start(database)
-        try:
-            json_sequence = database.get_sequence(filename)
-        except IndexError as e:
-            return
-        sequence = database.to_lst(json_sequence)
+        if self.current_row != filename:
+            self.current_row = filename
+            database = DatabaseWorker()
+            self.threadpool.start(database)
+            try:
+                json_sequence = database.get_sequence(filename)
+            except IndexError as e:
+                return
+            segments = database.to_lst(json_sequence)
+            self.current_segments = segments
+        else:
+            segments = self.current_segments
 
-        if sequence[pos] in self.sequences:
+        if segments[pos] in self.sequences:
             self.click_box.setChecked(True)
         else:
             self.click_box.setChecked(False)
 
-        if len(sequence) > pos >= 0:
-            segment = helper.Segment(sequence[pos], filename, pos)
+        segment = helper.Segment(segments[pos], filename, pos)
 
-            part = segment.part
-            plot = part.plot(doneAction=None)
-            sc = MplCanvas(plot.figure)
-            self.layout.addWidget(sc, 0, 2, 1, 8)
-            self.indicator.setText(f"{self.graph_positions[filename] + 1}/{len(sequence)}")
-            self.current_segment = segment
+        part = segment.part
+        plot = part.plot(doneAction=None)
+        sc = MplCanvas(plot.figure)
+        self.layout.addWidget(sc, 0, 2, 1, 8)
+        self.indicator.setText(f"{self.graph_positions[filename] + 1}/{len(segments)}")
+        self.current_segment = segment
 
     def play(self):
         if self.current_segment is not None and not self.now_playing:

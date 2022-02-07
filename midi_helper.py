@@ -43,6 +43,9 @@ class Segment:
         # Remove temporary midi file from /tmp
         os.remove(f"tmp/{self.filename}_{self.index}")
 
+    def get_segment(self):
+        return self.segment
+
 
 class Extract:
     def __init__(self, filename):
