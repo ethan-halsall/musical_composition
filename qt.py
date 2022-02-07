@@ -3,7 +3,7 @@ import sys
 import traceback
 from random import randint
 
-from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, QObject, pyqtSignal
+from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, QObject, pyqtSignal, Qt
 from PyQt5.QtWidgets import *
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
@@ -117,6 +117,7 @@ class Window(QWidget):
         self.current_segment = None
         self.sequence_generating = False
         self.now_playing = False
+        self.sequences = []
 
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -129,17 +130,17 @@ class Window(QWidget):
             self.graph_positions[file] = 0
         self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
         self.list_widget.clicked.connect(self.clicked)
-        self.layout.addWidget(self.list_widget, 0, 0, 1, 2)
+        self.layout.addWidget(self.list_widget, 0, 0, 2, 2)
 
         self.button_sequence = QPushButton()
         self.button_sequence.setText("Generate sequences")
         self.button_sequence.clicked.connect(self.on_button_sequence)
-        self.layout.addWidget(self.button_sequence, 1, 0)
+        self.layout.addWidget(self.button_sequence, 2, 0)
 
         self.button_generate = QPushButton()
         self.button_generate.setText("Generate music")
         self.button_generate.clicked.connect(self.on_button_generate)
-        self.layout.addWidget(self.button_generate, 1, 1)
+        self.layout.addWidget(self.button_generate, 2, 1)
 
         # Create button for going to previous graph
         self.button_previous = QPushButton()
@@ -155,17 +156,41 @@ class Window(QWidget):
 
         self.indicator = QLabel()
         self.indicator.setText("0/0")
-        self.layout.addWidget(self.indicator, 1, 7)
+        self.indicator.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.indicator, 2, 9)
 
         # Create button for going to next graph
         self.button_play = QPushButton()
         self.button_play.setText("Play")
         self.button_play.clicked.connect(self.play)
-        self.layout.addWidget(self.button_play, 1, 6)
+        self.layout.addWidget(self.button_play, 1, 7)
+
+        self.click_box = QCheckBox("Include")
+        self.click_box.clicked.connect(self.click_box_listener)
+        self.layout.addWidget(self.click_box, 2, 8)
 
         # Create a database object on a background thread
         self.database = DatabaseWorker()
         self.threadpool.start(self.database)
+
+    def click_box_listener(self):
+        item = self.list_widget.currentItem().text()
+        database = DatabaseWorker()
+        self.threadpool.start(database)
+        try:
+            json_sequence = database.get_sequence(item)
+        except IndexError as e:
+            return
+        sequence = database.to_lst(json_sequence)
+
+        pos = self.graph_positions[item]
+
+        if self.click_box.isChecked():
+            self.sequences.append(sequence[pos])
+        else:
+            self.sequences.remove(sequence[pos])
+
+        print(self.sequences)
 
     def next_graph(self):
         item = self.list_widget.currentItem().text()
@@ -177,7 +202,7 @@ class Window(QWidget):
         self.graph_positions[item] -= 1
         self.draw_graph(item, pos=self.graph_positions[item])
 
-    def clicked(self, qmodelindex):
+    def clicked(self):
         item = self.list_widget.currentItem()
         self.draw_graph(item.text())
 
@@ -190,8 +215,14 @@ class Window(QWidget):
             return
         sequence = database.to_lst(json_sequence)
 
+        if sequence[pos] in self.sequences:
+            self.click_box.setChecked(True)
+        else:
+            self.click_box.setChecked(False)
+
         if len(sequence) > pos >= 0:
             segment = helper.Segment(sequence[pos], filename, pos)
+
             part = segment.part
             plot = part.plot(doneAction=None)
             sc = MplCanvas(plot.figure)
