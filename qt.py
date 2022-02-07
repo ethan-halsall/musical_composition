@@ -121,6 +121,7 @@ class Window(QWidget):
         self.sequence_generating = False
         self.now_playing = False
         self.sequences = []
+        self.figure = None
 
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -133,6 +134,7 @@ class Window(QWidget):
             self.graph_positions[file] = 0
         self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
         self.list_widget.clicked.connect(self.clicked)
+        self.list_widget.setCurrentRow(0)
         self.layout.addWidget(self.list_widget, 0, 0, 2, 2)
 
         self.button_sequence = QPushButton()
@@ -176,6 +178,8 @@ class Window(QWidget):
         self.database = DatabaseWorker()
         self.threadpool.start(self.database)
 
+        self.draw_graph(files[0], pos=0)
+
     def click_box_listener(self):
         segment = self.current_segment.get_segment()
         if self.click_box.isChecked():
@@ -204,18 +208,20 @@ class Window(QWidget):
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        if str(self.current_row) != filename:
+        if True: # Temporary hack - to fix
             self.current_row = filename
             database = DatabaseWorker()
             self.threadpool.start(database)
             try:
                 json_sequence = database.get_sequence(filename)
             except IndexError as e:
+                if self.figure is not None:
+                    self.figure.close()
                 fig = plt.figure()
-                sc = MplCanvas(fig)
-                self.layout.addWidget(sc, 0, 2, 1, 8)
+                self.figure = MplCanvas(fig)
+                self.layout.addWidget(self.figure, 0, 2, 1, 8)
                 return
-            
+
             segments = database.to_lst(json_sequence)
             self.current_segments = segments
         else:
@@ -228,10 +234,13 @@ class Window(QWidget):
 
         segment = helper.Segment(segments[pos], filename, pos)
 
+        if self.figure is not None:
+            self.figure.close()
+
         part = segment.part
         plot = part.plot(doneAction=None)
-        sc = MplCanvas(plot.figure)
-        self.layout.addWidget(sc, 0, 2, 1, 8)
+        self.figure = MplCanvas(plot.figure)
+        self.layout.addWidget(self.figure, 0, 2, 1, 8)
         self.indicator.setText(f"{self.graph_positions[filename] + 1}/{len(segments)}")
         self.current_segment = segment
 
