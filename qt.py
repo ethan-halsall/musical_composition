@@ -48,7 +48,7 @@ class SequenceWorker(QRunnable):
                 while not success:
                     try:
                         # Generate a segment of length some power 2^n
-                        length = 2 ** randint(2, 3)
+                        length = 2 ** randint(2, 4)
                         notes = markov_chain.generate_sequence(markov, length=length)
                         sequences.append(notes)
                         success = True
@@ -116,7 +116,7 @@ class Window(QWidget):
 
         self.current_segments = None
         self.current_segment = None
-        self.current_row = None
+        self.current_row = ""
         self.sequence_generating = False
         self.now_playing = False
         self.sequences = []
@@ -203,7 +203,7 @@ class Window(QWidget):
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        if self.current_row != filename:
+        if str(self.current_row) != filename:
             self.current_row = filename
             database = DatabaseWorker()
             self.threadpool.start(database)
