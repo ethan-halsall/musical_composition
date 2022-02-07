@@ -5,6 +5,7 @@ from random import randint
 
 from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, QObject, pyqtSignal, Qt
 from PyQt5.QtWidgets import *
+from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 import midi_helper as helper
@@ -210,7 +211,11 @@ class Window(QWidget):
             try:
                 json_sequence = database.get_sequence(filename)
             except IndexError as e:
+                fig = plt.figure()
+                sc = MplCanvas(fig)
+                self.layout.addWidget(sc, 0, 2, 1, 8)
                 return
+            
             segments = database.to_lst(json_sequence)
             self.current_segments = segments
         else:
