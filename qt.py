@@ -116,7 +116,7 @@ class Window(QWidget):
 
         self.current_segments = None
         self.current_segment = None
-        self.current_row = 0
+        self.current_row = None
         self.sequence_generating = False
         self.now_playing = False
         self.sequences = []
