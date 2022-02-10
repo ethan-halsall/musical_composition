@@ -178,7 +178,7 @@ class Window(QWidget):
         self.database = DatabaseWorker()
         self.threadpool.start(self.database)
 
-        self.draw_graph(files[0], pos=0)
+        # self.draw_graph(files[0], pos=0) this needs to be run after constructor
 
     def click_box_listener(self):
         segment = self.current_segment.get_segment()
@@ -208,7 +208,7 @@ class Window(QWidget):
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        if True: # Temporary hack - to fix
+        if self.current_segments is None or filename != self.current_row:  # Temporary hack - to fix
             self.current_row = filename
             database = DatabaseWorker()
             self.threadpool.start(database)
@@ -250,6 +250,8 @@ class Window(QWidget):
             self.threadpool.start(worker)
             worker.signals.finished.connect(self.playing_complete)
             self.now_playing = True
+        else:
+            print("Music already playing")
 
     def playing_complete(self):
         self.now_playing = False
@@ -269,7 +271,18 @@ class Window(QWidget):
             print("Worker already running")
 
     def on_button_generate(self):
-        print("wew")
+        rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
+        if self.sequences:
+            gen = helper.Generate(self.sequences, rules)
+            melody = gen.l_system(gen.axiom, 2)
+            sequence = gen.convert_to_sequence(melody)
+            print(sequence)
+            segment = helper.Segment(sequence, "test.mid", 0)
+
+            worker = PlayMidiWorker(segment)
+            self.threadpool.start(worker)
+            worker.signals.finished.connect(self.playing_complete)
+            self.now_playing = True
 
 
 app = QApplication(sys.argv)
