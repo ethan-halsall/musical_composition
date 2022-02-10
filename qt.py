@@ -50,7 +50,8 @@ class SequenceWorker(QRunnable):
                     try:
                         # Generate a segment of length some power 2^n
                         length = 2 ** randint(2, 4)
-                        notes = markov_chain.generate_sequence(markov, length=length)
+                        notes = markov_chain.generate_sequence(
+                            markov, length=length)
                         sequences.append(notes)
                         success = True
                     except Exception as e:
@@ -62,25 +63,7 @@ class SequenceWorker(QRunnable):
             exctype, value = sys.exc_info()[:2]
             self.signals.error.emit((exctype, value, traceback.format_exc()))
         finally:
-            self.signals.finished.emit(filename)  # Done
-
-        # notes = [choice(blocks) for x in range(50)]
-
-        # rules = {"a": "b", "b": "(a)[b]"}
-        # rules = {"a": "b[a]b(a)a", "b": "bb"}
-        # rules = {"a": "d[dbe](dce)e", "b": "d[daf](dcf)f", "c": "d[dbg](dag)g"}
-        # rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
-        # rules = {"a": "b[a[ba]]", "b": "b((b)a)c", "c": "cd"}
-
-        # tree = lsystem("a", rules, 8)
-        # durations = parse_lengths(tree)
-        # print(durations)
-        # self.filename = "mozasasaassaas"
-        # helper.write_to_midi(f"{self.filename[:-4]}_{self.seed}.mid", list(itertools.chain.from_iterable(notes)),
-        #                     durations)
-
-        # Play midi file using timidity binary
-        # os.system(f"timidity -Os out/{self.filename[:-4]}_{self.seed}.mid")
+            self.signals.finished.emit(filename)
 
 
 class PlayMidiWorker(QRunnable):
@@ -124,7 +107,8 @@ class Window(QWidget):
         self.figure = None
 
         self.threadpool = QThreadPool()
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+        print("Multithreading with maximum %d threads" %
+              self.threadpool.maxThreadCount())
 
         # Get a list of all files in the midi dir with the .mid extension
         files = [f for f in os.listdir('./midi') if f.endswith(".mid")]
@@ -208,7 +192,7 @@ class Window(QWidget):
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        if self.current_segments is None or filename != self.current_row:  # Temporary hack - to fix
+        if self.current_segments is None or filename != self.current_row:
             self.current_row = filename
             database = DatabaseWorker()
             self.threadpool.start(database)
@@ -241,7 +225,8 @@ class Window(QWidget):
         plot = part.plot(doneAction=None)
         self.figure = MplCanvas(plot.figure)
         self.layout.addWidget(self.figure, 0, 2, 1, 8)
-        self.indicator.setText(f"{self.graph_positions[filename] + 1}/{len(segments)}")
+        self.indicator.setText(
+            f"{self.graph_positions[filename] + 1}/{len(segments)}")
         self.current_segment = segment
 
     def play(self):
@@ -271,12 +256,11 @@ class Window(QWidget):
             print("Worker already running")
 
     def on_button_generate(self):
-        rules = {"a": "c(ba(b))c[ba[b]]", "b": "c(be)c[bf]", "c": "cgg"}
+        rules = {"a": "b", "b": "ba", "c": "bc"}
         if self.sequences:
             gen = helper.Generate(self.sequences, rules)
             melody = gen.l_system(gen.axiom, 2)
             sequence = gen.convert_to_sequence(melody)
-            print(sequence)
             segment = helper.Segment(sequence, "test.mid", 0)
 
             worker = PlayMidiWorker(segment)
