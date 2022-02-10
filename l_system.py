@@ -34,6 +34,9 @@ def parse_lengths(tree, length=0.14):
     return durations
 
 
+tree = lsystem("a", rules, 2)
+print(tree)
+
 """tree = lsystem("a", rules, 7)
 
 

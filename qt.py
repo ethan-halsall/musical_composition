@@ -90,6 +90,53 @@ class MplCanvas(FigureCanvasQTAgg):
         super(MplCanvas, self).__init__(fig)
 
 
+class MyPopup(QWidget):
+    def __init__(self, segment, threadpool):
+        QWidget.__init__(self)
+        self.window().resize(1280, 720)
+        self.layout = QGridLayout()
+        self.setLayout(self.layout)
+
+        self.threadpool = threadpool
+
+        self.segment = segment
+        self.figure = None
+        self.now_playing = False
+
+        self.button_play = QPushButton()
+        self.button_play.setText("Play")
+        self.button_play.clicked.connect(self.play)
+        self.layout.addWidget(self.button_play, 1, 7)
+
+        self.button_export = QPushButton()
+        self.button_export.setText("Export")
+        self.button_export.clicked.connect(self.export)
+        self.layout.addWidget(self.button_export, 1, 6)
+
+        self.draw_graph()
+
+    def draw_graph(self):
+        part = self.segment.part
+        plot = part.plot(doneAction=None)
+        self.figure = MplCanvas(plot.figure)
+        self.layout.addWidget(self.figure, 0, 0, 1, 8)
+
+    def play(self):
+        if not self.now_playing:
+            worker = PlayMidiWorker(self.segment)
+            self.threadpool.start(worker)
+            worker.signals.finished.connect(self.playing_complete)
+            self.now_playing = True
+        else:
+            print("Music already playing")
+
+    def export(self):
+        self.segment.write_to_midi()
+
+    def playing_complete(self):
+        self.now_playing = False
+
+
 class Window(QWidget):
     def __init__(self):
         QWidget.__init__(self)
@@ -105,6 +152,8 @@ class Window(QWidget):
         self.now_playing = False
         self.sequences = []
         self.figure = None
+
+        self.popup = None
 
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" %
@@ -263,10 +312,9 @@ class Window(QWidget):
             sequence = gen.convert_to_sequence(melody)
             segment = helper.Segment(sequence, "test.mid", 0)
 
-            worker = PlayMidiWorker(segment)
-            self.threadpool.start(worker)
-            worker.signals.finished.connect(self.playing_complete)
-            self.now_playing = True
+            if self.popup is None:
+                self.popup = MyPopup(segment, self.threadpool)
+                self.popup.show()
 
 
 app = QApplication(sys.argv)
