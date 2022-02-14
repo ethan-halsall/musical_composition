@@ -7,6 +7,7 @@ from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
 from music21.stream import Part
 import string
+from random import choice
 
 
 class Generate:
@@ -44,6 +45,13 @@ class Generate:
                 out += self.dict[char]
 
         return out
+
+    def generate_rules(self):
+        rules = {}
+        for key, _ in self.dict.items():
+            rules[key] = f"{choice(self.axiom)}{choice(self.axiom)}"
+
+        self.rules = rules
 
 
 class Segment:

@@ -36,6 +36,10 @@ class Generate:
 
         return out
 
+    def generate_rules(self):
+        for key, _ in self.dict:
+            print(key)
+
 
 """rules = {"a": "b", "b": "(a)[b]"}
 rules = {"a": "b[a]b(a)a", "b": "bb"}
