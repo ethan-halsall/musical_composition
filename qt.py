@@ -131,7 +131,7 @@ class MyPopup(QWidget):
             print("Music already playing")
 
     def export(self):
-        self.segment.write_to_midi()
+        self.segment.write_to_midi(export=True)
 
     def playing_complete(self):
         self.now_playing = False

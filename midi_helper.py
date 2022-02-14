@@ -75,19 +75,22 @@ class Segment:
 
         return part
 
-    def write_to_midi(self):
+    def write_to_midi(self, export=False):
         mf = streamToMidiFile(self.part)
-        mf.open(f"tmp/{self.filename}_{self.index}", 'wb')
+        if export:
+            mf.open(f"out/{self.index}_{self.filename}", 'wb')
+        else:
+            mf.open(f"tmp/{self.index}_{self.filename}", 'wb')
         mf.write()
         mf.close()
 
     def play(self):
         # Play midi file using timidity binary
         self.write_to_midi()
-        os.system(f"timidity -Os tmp/{self.filename}_{self.index}")
+        os.system(f"timidity -Os tmp/{self.index}_{self.filename}")
 
         # Remove temporary midi file from /tmp
-        os.remove(f"tmp/{self.filename}_{self.index}")
+        os.remove(f"tmp/{self.index}_{self.filename}")
 
     def get_segment(self):
         return self.segment
