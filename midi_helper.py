@@ -46,6 +46,7 @@ class Generate:
 
         return out
 
+    # Pretty generic rules - todo improve these
     def generate_rules(self):
         rules = {}
         for key, _ in self.dict.items():
