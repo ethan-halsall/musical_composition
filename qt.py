@@ -253,6 +253,8 @@ class Window(QWidget):
                 fig = plt.figure()
                 self.figure = MplCanvas(fig)
                 self.layout.addWidget(self.figure, 0, 2, 1, 8)
+                self.click_box.setChecked(False)
+                self.indicator.setText("0/0")
                 return
 
             segments = database.to_lst(json_sequence)
