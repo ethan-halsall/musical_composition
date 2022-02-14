@@ -87,7 +87,11 @@ class Segment:
     def play(self):
         # Play midi file using timidity binary
         self.write_to_midi()
-        os.system(f"timidity -Os tmp/{self.index}_{self.filename}")
+
+        try:
+            os.system(f"timidity -Os tmp/{self.index}_{self.filename}")
+        except Exception as e:
+            print(f"Music could not be played due to: {e}")
 
         # Remove temporary midi file from /tmp
         os.remove(f"tmp/{self.index}_{self.filename}")
