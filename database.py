@@ -10,7 +10,8 @@ class Database:
         self.path = path
         table = """CREATE TABLE IF NOT EXISTS Sequence (
                                             filename TEXT PRIMARY KEY,
-                                            sequences JSON
+                                            sequences JSON,
+                                            durations JSON
                                         );"""
 
         # Create a database connection
@@ -57,21 +58,21 @@ class Database:
         cur.close()
         return rows
 
-    def insert(self, filename, sequences):
+    def insert(self, filename, sequences, durations):
         data = self._fetch(
             "SELECT filename FROM Sequence WHERE filename=?", (filename,))
 
         if len(data) == 0:
-            params = [filename, sequences]
+            params = [filename, sequences, durations]
             try:
-                insert_query = "INSERT INTO Sequence (filename, sequences) VALUES(?,?)"
+                insert_query = "INSERT INTO Sequence (filename, sequences, durations) VALUES(?,?,?)"
                 self._insert(insert_query, params)
             except Error as e:
                 print(e)
         else:
-            update_params = [sequences, filename]
+            update_params = [sequences, durations, filename]
             try:
-                update_query = "UPDATE Sequence SET sequences = ? WHERE filename=?"
+                update_query = "UPDATE Sequence SET sequences = ?, durations = ?  WHERE filename=?"
                 self._insert(update_query, update_params)
             except Error as e:
                 print(e)
@@ -79,6 +80,11 @@ class Database:
     def get_sequence(self, filename):
         rows = self._fetch(
             "SELECT sequences FROM Sequence WHERE filename=?", (filename,))
+        return rows[0][0]
+
+    def get_durations(self, filename):
+        rows = self._fetch(
+            "SELECT durations FROM Sequence WHERE filename=?", (filename,))
         return rows[0][0]
 
     @staticmethod

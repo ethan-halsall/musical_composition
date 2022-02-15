@@ -42,7 +42,7 @@ class Generate:
         out = []
         for char in melody:
             if char in self.dict:
-                out += self.dict[char]
+                out.append(self.dict[char])
 
         return out
 
@@ -56,8 +56,9 @@ class Generate:
 
 
 class Segment:
-    def __init__(self, segment, filename, index):
+    def __init__(self, segment, filename, index, durations):
         self.segment = segment
+        self.durations = durations
         self.filename = filename
         self.index = index
         self.part = self.__to_part()
@@ -67,12 +68,12 @@ class Segment:
         part.append(instrument.Piano())
         for i in range(len(self.segment)):
             note = self.segment[i]
-            # duration = durations[i]
+            duration = self.durations[i]
 
             if note == "rest":
-                part.append(Rest(quarterLength=1))
+                part.append(Rest(quarterLength=duration))
             else:
-                part.append(Chord(note, quarterLength=1))
+                part.append(Chord(note, quarterLength=duration))
 
         return part
 

@@ -37,13 +37,18 @@ class SequenceWorker(QRunnable):
             midi_extraction = helper.Extract(f"midi/{filename}")
             midi_extraction.parse_midi()
             chords = midi_extraction.get_chords()
+            duration = midi_extraction.get_durations()
 
             # Generate markov chain
             markov_chain = Markov(3)
             markov = markov_chain.transition_matrix(chords)
+            float_durations = [float(a) for a in midi_extraction.get_durations()]
+            durations_as_str = [str(a) for a in float_durations]
+            durations_markov = markov_chain.transition_matrix(durations_as_str)
 
             # Generate 15 sequence of notes using the markov chain
             sequences = []
+            durations = []
             for _ in range(15):
                 success = False
                 while not success:
@@ -52,12 +57,15 @@ class SequenceWorker(QRunnable):
                         length = 2 ** randint(2, 4)
                         notes = markov_chain.generate_sequence(
                             markov, length=length)
+                        durations.append(markov_chain.generate_sequence(
+                            durations_markov, length=length))
+                        #print(durations)
                         sequences.append(notes)
                         success = True
                     except Exception as e:
                         print(e)
 
-            self.database.insert(filename, self.database.to_json(sequences))
+            self.database.insert(filename, self.database.to_json(sequences), self.database.to_json(durations))
         except:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
@@ -214,7 +222,7 @@ class Window(QWidget):
         # self.draw_graph(files[0], pos=0) this needs to be run after constructor
 
     def click_box_listener(self):
-        segment = self.current_segment.get_segment()
+        segment = self.current_segment
         if self.click_box.isChecked():
             self.sequences.append(segment)
         else:
@@ -241,12 +249,13 @@ class Window(QWidget):
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        if self.current_segments is None or filename != self.current_row:
+        if True:#self.current_segments is None or filename != self.current_row: #todo fix hack
             self.current_row = filename
             database = DatabaseWorker()
             self.threadpool.start(database)
             try:
                 json_sequence = database.get_sequence(filename)
+                json_durations = database.get_durations(filename)
             except IndexError as e:
                 if self.figure is not None:
                     self.figure.close()
@@ -258,6 +267,7 @@ class Window(QWidget):
                 return
 
             segments = database.to_lst(json_sequence)
+            durations = database.to_lst(json_durations)
             self.current_segments = segments
         else:
             segments = self.current_segments
@@ -267,7 +277,8 @@ class Window(QWidget):
         else:
             self.click_box.setChecked(False)
 
-        segment = helper.Segment(segments[pos], filename, pos)
+        duration = [float(a) for a in durations[pos]]
+        segment = helper.Segment(segments[pos], filename, pos, duration)
 
         if self.figure is not None:
             self.figure.close()
@@ -312,8 +323,15 @@ class Window(QWidget):
             gen = helper.Generate(self.sequences, rules)
             gen.generate_rules()
             melody = gen.l_system(gen.axiom, 2)
-            sequence = gen.convert_to_sequence(melody)
-            segment = helper.Segment(sequence, "test.mid", 0)
+            sequences = gen.convert_to_sequence(melody)
+
+            notes = []
+            durations = []
+            for sequence in sequences:
+                notes += sequence.get_segment()
+                durations += sequence.durations
+
+            segment = helper.Segment(notes, "test.mid", 0, durations)
 
             if self.popup is None:
                 self.popup = MyPopup(segment, self.threadpool)
