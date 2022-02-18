@@ -17,7 +17,7 @@ class MplCanvas(FigureCanvasQTAgg):
         super(MplCanvas, self).__init__(fig)
 
 
-class MyPopup(QWidget):
+class GeneratorPopup(QWidget):
     def __init__(self, segment, threadpool):
         QWidget.__init__(self)
         self.window().resize(1280, 720)
@@ -327,7 +327,7 @@ class Window(QWidget):
 
             segment = helper.Segment(notes, "test.mid", 0, durations)
 
-            self.popup = MyPopup(segment, self.threadpool)
+            self.popup = GeneratorPopup(segment, self.threadpool)
             self.popup.show()
 
 
