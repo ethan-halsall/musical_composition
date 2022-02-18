@@ -71,9 +71,9 @@ class Segment:
             duration = self.durations[i]
 
             if note == "rest":
-                part.append(Rest(quarterLength=duration))
+                part.append(Rest(quarterLength=1))
             else:
-                part.append(Chord(note, quarterLength=duration))
+                part.append(Chord(note, quarterLength=1))
 
         return part
 
@@ -108,6 +108,7 @@ class Extract:
         self._chords = []
         self._durations = []
         self.stream = converter.parse(self._filename)
+        self.instruments = instrument.partitionByInstrument(self.stream).parts
 
     def write(self):
         conv = converter.subConverters.ConverterLilypond()
@@ -117,10 +118,11 @@ class Extract:
     def get_key(self):
         self.stream.analyze('key')
 
-    def parse_midi(self, inst='Piano'):
-        music = self.stream
+    def get_instruments(self):
+        return self.instruments
 
-        for part in instrument.partitionByInstrument(music).parts:
+    def parse_midi(self, inst='Piano'):
+        for part in self.instruments:
             # signature = part[meter.TimeSignature][0]
             # select elements of only piano
             if inst in str(part):

@@ -1,7 +1,5 @@
 import os
 import sys
-import traceback
-from random import randint
 
 from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, QObject, pyqtSignal, Qt
 from PyQt5.QtWidgets import *
@@ -10,89 +8,10 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 import midi_helper as helper
 from database import DatabaseWorker
-from markov import Markov
-
-
-class WorkerSignals(QObject):
-    finished = pyqtSignal(str)
-    error = pyqtSignal(tuple)
-    result = pyqtSignal(object)
-    progress = pyqtSignal(int)
-
-
-class SequenceWorker(QRunnable):
-    def __init__(self, item, database):
-        super().__init__()
-        self.signals = WorkerSignals()
-        self.database = database
-        self.item = item
-        self.seed = 0
-
-    @pyqtSlot()
-    def run(self):
-        try:
-            filename = self.item.text()
-
-            # Extract the notes from midi file using midi helper
-            midi_extraction = helper.Extract(f"midi/{filename}")
-            midi_extraction.parse_midi()
-            chords = midi_extraction.get_chords()
-            duration = midi_extraction.get_durations()
-
-            # Generate markov chain
-            markov_chain = Markov(3)
-            markov = markov_chain.transition_matrix(chords)
-            float_durations = [float(a) for a in midi_extraction.get_durations()]
-            durations_as_str = [str(a) for a in float_durations]
-            durations_markov = markov_chain.transition_matrix(durations_as_str)
-
-            # Generate 15 sequence of notes using the markov chain
-            sequences = []
-            durations = []
-            for _ in range(15):
-                success = False
-                while not success:
-                    try:
-                        # Generate a segment of length some power 2^n
-                        length = 2 ** randint(2, 4)
-                        notes = markov_chain.generate_sequence(
-                            markov, length=length)
-                        durations.append(markov_chain.generate_sequence(
-                            durations_markov, length=length))
-                        #print(durations)
-                        sequences.append(notes)
-                        success = True
-                    except Exception as e:
-                        print(e)
-
-            self.database.insert(filename, self.database.to_json(sequences), self.database.to_json(durations))
-        except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
-        finally:
-            self.signals.finished.emit(filename)
-
-
-class PlayMidiWorker(QRunnable):
-    def __init__(self, segment: helper.Segment):
-        super().__init__()
-        self.current_segment = segment
-        self.signals = WorkerSignals()
-
-    def run(self) -> None:
-        try:
-            self.current_segment.play()
-        except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
-        finally:
-            self.signals.finished.emit("")
+import workers
 
 
 class MplCanvas(FigureCanvasQTAgg):
-
     def __init__(self, figure):
         fig = figure
         super(MplCanvas, self).__init__(fig)
@@ -131,7 +50,7 @@ class MyPopup(QWidget):
 
     def play(self):
         if not self.now_playing:
-            worker = PlayMidiWorker(self.segment)
+            worker = workers.PlayMidiWorker(self.segment)
             self.threadpool.start(worker)
             worker.signals.finished.connect(self.playing_complete)
             self.now_playing = True
@@ -143,6 +62,70 @@ class MyPopup(QWidget):
 
     def playing_complete(self):
         self.now_playing = False
+
+
+class InstrumentSelector(QWidget):
+    def __init__(self, filename, threadpool, database):
+        QWidget.__init__(self)
+        self.layout = QGridLayout()
+        self.setLayout(self.layout)
+        self.list_widget = QListWidget()
+        self.window().resize(500, 500)
+        self.filename = filename
+        self.layout.addWidget(self.list_widget)
+        self.threadpool = threadpool
+        self.database = database
+
+        self.midi_extraction = None
+
+        self.signals = workers.WorkerSignals()
+
+        self.button_sequence = QPushButton()
+        self.button_sequence.setText("Select instrument")
+        self.button_sequence.clicked.connect(self.select_instrument)
+        self.layout.addWidget(self.button_sequence, 2, 0)
+
+        worker = ProcessMidiWorker(self.filename)
+        self.threadpool.start(worker)
+        worker.signals.result.connect(self.display_midi_data)
+
+    def display_midi_data(self, midi_extraction):
+        self.midi_extraction = midi_extraction
+        for count, inst in enumerate(midi_extraction.get_instruments()):
+            self.list_widget.insertItem(count, str(inst))
+
+    def sequence_complete(self, filename):
+        self.signals.finished.emit(filename)
+        self.destroy()
+
+    def select_instrument(self):
+        if self.midi_extraction is None:
+            return
+
+        item = self.list_widget.currentItem().text()
+        print(item)
+
+        worker = workers.SequenceWorker(self.midi_extraction, self.database, self.filename, item)
+        self.threadpool.start(worker)
+        worker.signals.finished.connect(self.sequence_complete)
+
+
+class ProcessMidiWorker(QRunnable):
+    def __init__(self, item):
+        super().__init__()
+        self.signals = workers.WorkerSignals()
+        self.filename = item
+        self.midi_extraction = None
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            # Extract the notes from midi file using midi helper
+            self.midi_extraction = helper.Extract(f"midi/{self.filename}")
+            # midi_extraction.parse_midi()
+        finally:
+            if self.midi_extraction is not None:
+                self.signals.result.emit(self.midi_extraction)
 
 
 class Window(QWidget):
@@ -249,7 +232,7 @@ class Window(QWidget):
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        if True:#self.current_segments is None or filename != self.current_row: #todo fix hack
+        if True:  # self.current_segments is None or filename != self.current_row: #todo fix hack
             self.current_row = filename
             database = DatabaseWorker()
             self.threadpool.start(database)
@@ -293,7 +276,7 @@ class Window(QWidget):
 
     def play(self):
         if self.current_segment is not None and not self.now_playing:
-            worker = PlayMidiWorker(self.current_segment)
+            worker = workers.PlayMidiWorker(self.current_segment)
             self.threadpool.start(worker)
             worker.signals.finished.connect(self.playing_complete)
             self.now_playing = True
@@ -309,11 +292,15 @@ class Window(QWidget):
 
     def on_button_sequence(self):
         if not self.sequence_generating:
-            items = self.list_widget.currentItem()
-            worker = SequenceWorker(items, self.database)
-            self.threadpool.start(worker)
-            worker.signals.finished.connect(self.sequence_complete)
+            item = self.list_widget.currentItem().text()
+            self.selector = InstrumentSelector(item, self.threadpool, self.database)
+            self.selector.show()
+            self.selector.signals.finished.connect(self.sequence_complete)
             self.sequence_generating = True
+            # worker = SequenceWorker(items, self.database)
+            # self.threadpool.start(worker)
+            # worker.signals.finished.connect(self.sequence_complete)
+            # self.sequence_generating = True
         else:
             print("Worker already running")
 
