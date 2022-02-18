@@ -252,7 +252,7 @@ class Window(QWidget):
                     self.figure.close()
                 fig = plt.figure()
                 self.figure = MplCanvas(fig)
-                self.layout.addWidget(self.figure, 0, 2, 1, 8)
+                self.layout.addWidget(self.figure, 0, 2, 1, 8) # move processing to threading
                 self.click_box.setChecked(False)
                 self.indicator.setText("0/0")
                 self.key_label.setText("")
