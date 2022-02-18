@@ -40,7 +40,8 @@ class SequenceWorker(QRunnable):
             # Generate markov chain
             markov_chain = Markov(3)
             markov = markov_chain.transition_matrix(chords)
-            float_durations = [float(a) for a in midi_extraction.get_durations()]
+            float_durations = [float(a)
+                               for a in midi_extraction.get_durations()]
             durations_as_str = [str(a) for a in float_durations]
             durations_markov = markov_chain.transition_matrix(durations_as_str)
 
@@ -65,7 +66,7 @@ class SequenceWorker(QRunnable):
 
             self.database.insert(self.filename, self.database.to_json(sequences), self.database.to_json(durations),
                                  str(key))
-        except:
+        except Exception as e:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
             self.signals.error.emit((exctype, value, traceback.format_exc()))
@@ -88,3 +89,8 @@ class PlayMidiWorker(QRunnable):
             self.signals.error.emit((exctype, value, traceback.format_exc()))
         finally:
             self.signals.finished.emit("")
+
+
+class DatabaseWorker(QRunnable):
+    def __init__(self):
+        QRunnable.__init__(self)

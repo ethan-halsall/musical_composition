@@ -239,7 +239,7 @@ class Window(QWidget):
         self.draw_graph(item.text())
 
     def draw_graph(self, filename, pos=0):
-        if True:  # self.current_segments is None or filename != self.current_row: #todo fix hack
+        if self.current_segments is None or filename != self.current_row:
             self.current_row = filename
             database = DatabaseWorker()
             self.threadpool.start(database)
@@ -258,30 +258,31 @@ class Window(QWidget):
                 self.key_label.setText("")
                 return
 
+            self.current_segments = []
             segments = database.to_lst(json_sequence)
             durations = database.to_lst(json_durations)
-            self.current_segments = segments
-        else:
-            segments = self.current_segments
+            for i in range(len(segments)):
+                duration = [float(a) for a in durations[i]]
+                self.current_segments.append(helper.Segment(
+                    segments[i], filename, pos, duration, key))
 
-        if segments[pos] in self.sequences:
+        if self.current_segments[pos] in self.sequences:
             self.click_box.setChecked(True)
         else:
             self.click_box.setChecked(False)
 
-        duration = [float(a) for a in durations[pos]]
-        segment = helper.Segment(segments[pos], filename, pos, duration)
+        segment = self.current_segments[pos]
 
         if self.figure is not None:
             self.figure.close()
 
-        self.key_label.setText(key)
+        self.key_label.setText(segment.get_key()) # bug here does not show after regen
         part = segment.part
         plot = part.plot(doneAction=None)
         self.figure = MplCanvas(plot.figure)
         self.layout.addWidget(self.figure, 0, 2, 1, 8)
         self.indicator.setText(
-            f"{self.graph_positions[filename] + 1}/{len(segments)}")
+            f"{self.graph_positions[filename] + 1}/{len(self.current_segments)}")
         self.current_segment = segment
 
     def play(self):
@@ -325,7 +326,8 @@ class Window(QWidget):
                 notes += sequence.get_segment()
                 durations += sequence.durations
 
-            segment = helper.Segment(notes, "test.mid", 0, durations)
+            segment = helper.Segment(
+                notes, "test.mid", 0, durations, sequences[0].key)
 
             self.popup = GeneratorPopup(segment, self.threadpool)
             self.popup.show()

@@ -56,11 +56,12 @@ class Generate:
 
 
 class Segment:
-    def __init__(self, segment, filename, index, durations):
+    def __init__(self, segment, filename, index, durations, key):
         self.segment = segment
         self.durations = durations
         self.filename = filename
         self.index = index
+        self.key = key
         self.part = self.__to_part()
 
     def __to_part(self):
@@ -101,6 +102,9 @@ class Segment:
     def get_segment(self):
         return self.segment
 
+    def get_key(self):
+        return self.key
+
 
 class Extract:
     def __init__(self, filename):
@@ -112,7 +116,8 @@ class Extract:
 
     def write(self):
         conv = converter.subConverters.ConverterLilypond()
-        conv.write(self.stream, fmt='lilypond', fp=self._filename, subformats=['pdf'])
+        conv.write(self.stream, fmt='lilypond',
+                   fp=self._filename, subformats=['pdf'])
         move(f"{self._filename}.pdf", f"pdf/{self._filename[5:]}.pdf")
 
     def get_key(self):
@@ -135,7 +140,8 @@ class Extract:
                         self._durations.append(element.quarterLength)
                     # chords
                     elif isinstance(element, chord.Chord):
-                        self._chords.append(' '.join(str(n.pitch) for n in element))
+                        self._chords.append(' '.join(str(n.pitch)
+                                            for n in element))
                         self._durations.append(element.quarterLength)
                     # rests
                     elif isinstance(element, note.Rest):

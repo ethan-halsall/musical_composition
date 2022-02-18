@@ -110,5 +110,6 @@ class DatabaseWorker(QRunnable, Database):
     def run(self):
         Database.__init__(self)
 
+
 # database = Database()
 # database.insert("hello", "yoyoyo")
