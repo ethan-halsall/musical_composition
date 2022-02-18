@@ -11,7 +11,8 @@ class Database:
         table = """CREATE TABLE IF NOT EXISTS Sequence (
                                             filename TEXT PRIMARY KEY,
                                             sequences JSON,
-                                            durations JSON
+                                            durations JSON,
+                                            key TEXT
                                         );"""
 
         # Create a database connection
@@ -58,21 +59,21 @@ class Database:
         cur.close()
         return rows
 
-    def insert(self, filename, sequences, durations):
+    def insert(self, filename, sequences, durations, key):
         data = self._fetch(
             "SELECT filename FROM Sequence WHERE filename=?", (filename,))
 
         if len(data) == 0:
-            params = [filename, sequences, durations]
+            params = [filename, sequences, durations, key]
             try:
-                insert_query = "INSERT INTO Sequence (filename, sequences, durations) VALUES(?,?,?)"
+                insert_query = "INSERT INTO Sequence (filename, sequences, durations, key) VALUES(?,?,?,?)"
                 self._insert(insert_query, params)
             except Error as e:
                 print(e)
         else:
-            update_params = [sequences, durations, filename]
+            update_params = [sequences, durations, key, filename]
             try:
-                update_query = "UPDATE Sequence SET sequences = ?, durations = ?  WHERE filename=?"
+                update_query = "UPDATE Sequence SET sequences = ?, durations = ?, key = ?  WHERE filename=?"
                 self._insert(update_query, update_params)
             except Error as e:
                 print(e)
@@ -85,6 +86,11 @@ class Database:
     def get_durations(self, filename):
         rows = self._fetch(
             "SELECT durations FROM Sequence WHERE filename=?", (filename,))
+        return rows[0][0]
+
+    def get_key(self, filename):
+        rows = self._fetch(
+            "SELECT key FROM Sequence WHERE filename=?", (filename,))
         return rows[0][0]
 
     @staticmethod

@@ -116,7 +116,7 @@ class Extract:
         move(f"{self._filename}.pdf", f"pdf/{self._filename[5:]}.pdf")
 
     def get_key(self):
-        self.stream.analyze('key')
+        return self.stream.analyze('key')
 
     def get_instruments(self):
         return self.instruments

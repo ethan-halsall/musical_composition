@@ -1,14 +1,14 @@
 import os
 import sys
 
-from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, QObject, pyqtSignal, Qt
+from PyQt5.QtCore import QRunnable, pyqtSlot, QThreadPool, Qt
 from PyQt5.QtWidgets import *
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 import midi_helper as helper
-from database import DatabaseWorker
 import workers
+from database import DatabaseWorker
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -91,6 +91,7 @@ class InstrumentSelector(QWidget):
 
     def display_midi_data(self, midi_extraction):
         self.midi_extraction = midi_extraction
+        # print(self.midi_extraction.get_key())
         for count, inst in enumerate(midi_extraction.get_instruments()):
             self.list_widget.insertItem(count, str(inst))
 
@@ -103,9 +104,9 @@ class InstrumentSelector(QWidget):
             return
 
         item = self.list_widget.currentItem().text()
-        print(item)
 
-        worker = workers.SequenceWorker(self.midi_extraction, self.database, self.filename, item)
+        worker = workers.SequenceWorker(
+            self.midi_extraction, self.database, self.filename, item)
         self.threadpool.start(worker)
         worker.signals.finished.connect(self.sequence_complete)
 
@@ -122,7 +123,6 @@ class ProcessMidiWorker(QRunnable):
         try:
             # Extract the notes from midi file using midi helper
             self.midi_extraction = helper.Extract(f"midi/{self.filename}")
-            # midi_extraction.parse_midi()
         finally:
             if self.midi_extraction is not None:
                 self.signals.result.emit(self.midi_extraction)
@@ -131,6 +131,7 @@ class ProcessMidiWorker(QRunnable):
 class Window(QWidget):
     def __init__(self):
         QWidget.__init__(self)
+        self.selector = None
         self.layout = QGridLayout()
         self.setLayout(self.layout)
         self.list_widget = QListWidget()
@@ -183,6 +184,7 @@ class Window(QWidget):
         self.button_forward.clicked.connect(self.next_graph)
         self.layout.addWidget(self.button_forward, 1, 9)
 
+        # Indicator label
         self.indicator = QLabel()
         self.indicator.setText("0/0")
         self.indicator.setAlignment(Qt.AlignCenter)
@@ -197,6 +199,11 @@ class Window(QWidget):
         self.click_box = QCheckBox("Include")
         self.click_box.clicked.connect(self.click_box_listener)
         self.layout.addWidget(self.click_box, 2, 8)
+
+        # Key label
+        self.key_label = QLabel()
+        self.key_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.key_label, 2, 7)
 
         # Create a database object on a background thread
         self.database = DatabaseWorker()
@@ -239,6 +246,7 @@ class Window(QWidget):
             try:
                 json_sequence = database.get_sequence(filename)
                 json_durations = database.get_durations(filename)
+                key = database.get_key(filename)
             except IndexError as e:
                 if self.figure is not None:
                     self.figure.close()
@@ -247,6 +255,7 @@ class Window(QWidget):
                 self.layout.addWidget(self.figure, 0, 2, 1, 8)
                 self.click_box.setChecked(False)
                 self.indicator.setText("0/0")
+                self.key_label.setText("")
                 return
 
             segments = database.to_lst(json_sequence)
@@ -266,6 +275,7 @@ class Window(QWidget):
         if self.figure is not None:
             self.figure.close()
 
+        self.key_label.setText(key)
         part = segment.part
         plot = part.plot(doneAction=None)
         self.figure = MplCanvas(plot.figure)
@@ -293,14 +303,11 @@ class Window(QWidget):
     def on_button_sequence(self):
         if not self.sequence_generating:
             item = self.list_widget.currentItem().text()
-            self.selector = InstrumentSelector(item, self.threadpool, self.database)
+            self.selector = InstrumentSelector(
+                item, self.threadpool, self.database)
             self.selector.show()
             self.selector.signals.finished.connect(self.sequence_complete)
             self.sequence_generating = True
-            # worker = SequenceWorker(items, self.database)
-            # self.threadpool.start(worker)
-            # worker.signals.finished.connect(self.sequence_complete)
-            # self.sequence_generating = True
         else:
             print("Worker already running")
 
@@ -320,9 +327,8 @@ class Window(QWidget):
 
             segment = helper.Segment(notes, "test.mid", 0, durations)
 
-            if self.popup is None:
-                self.popup = MyPopup(segment, self.threadpool)
-                self.popup.show()
+            self.popup = MyPopup(segment, self.threadpool)
+            self.popup.show()
 
 
 app = QApplication(sys.argv)

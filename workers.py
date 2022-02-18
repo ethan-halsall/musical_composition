@@ -33,7 +33,9 @@ class SequenceWorker(QRunnable):
             midi_extraction = self.item
             midi_extraction.parse_midi(inst=self.instrument)
             chords = midi_extraction.get_chords()
-            duration = midi_extraction.get_durations()
+            key = midi_extraction.get_key()
+
+            print(key)
 
             # Generate markov chain
             markov_chain = Markov(3)
@@ -61,7 +63,8 @@ class SequenceWorker(QRunnable):
                     except Exception as e:
                         print(e)
 
-            self.database.insert(self.filename, self.database.to_json(sequences), self.database.to_json(durations))
+            self.database.insert(self.filename, self.database.to_json(sequences), self.database.to_json(durations),
+                                 str(key))
         except:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
