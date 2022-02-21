@@ -8,7 +8,6 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 import midi_helper as helper
 import workers
-from database import DatabaseWorker
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -65,7 +64,7 @@ class GeneratorPopup(QWidget):
 
 
 class InstrumentSelector(QWidget):
-    def __init__(self, filename, threadpool, database):
+    def __init__(self, filename, threadpool):
         QWidget.__init__(self)
         self.layout = QGridLayout()
         self.setLayout(self.layout)
@@ -74,7 +73,6 @@ class InstrumentSelector(QWidget):
         self.filename = filename
         self.layout.addWidget(self.list_widget)
         self.threadpool = threadpool
-        self.database = database
 
         self.midi_extraction = None
 
@@ -106,7 +104,7 @@ class InstrumentSelector(QWidget):
         item = self.list_widget.currentItem().text()
 
         worker = workers.SequenceWorker(
-            self.midi_extraction, self.database, self.filename, item)
+            self.midi_extraction, self.filename, item)
         self.threadpool.start(worker)
         worker.signals.finished.connect(self.sequence_complete)
 
@@ -205,10 +203,6 @@ class Window(QWidget):
         self.key_label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.key_label, 2, 7)
 
-        # Create a database object on a background thread
-        self.database = DatabaseWorker()
-        self.threadpool.start(self.database)
-
         # self.draw_graph(files[0], pos=0) this needs to be run after constructor
 
     def click_box_listener(self):
@@ -225,46 +219,28 @@ class Window(QWidget):
         new_pos = self.graph_positions[item] + 1
         if new_pos < len(self.current_segments):
             self.graph_positions[item] += 1
-            self.draw_graph(item, pos=self.graph_positions[item])
+            self.on_listbox_click(item)
 
     def prev_graph(self):
         item = self.list_widget.currentItem().text()
         new_pos = self.graph_positions[item] - 1
         if new_pos >= 0:
             self.graph_positions[item] -= 1
-            self.draw_graph(item, pos=self.graph_positions[item])
+            self.on_listbox_click(item)
 
     def clicked(self):
         item = self.list_widget.currentItem()
-        self.draw_graph(item.text())
+        self.on_listbox_click(item.text())
 
-    def draw_graph(self, filename, pos=0):
-        if self.current_segments is None or filename != self.current_row:
-            self.current_row = filename
-            database = DatabaseWorker()
-            self.threadpool.start(database)
-            try:
-                json_sequence = database.get_sequence(filename)
-                json_durations = database.get_durations(filename)
-                key = database.get_key(filename)
-            except IndexError as e:
-                if self.figure is not None:
-                    self.figure.close()
-                fig = plt.figure()
-                self.figure = MplCanvas(fig)
-                self.layout.addWidget(self.figure, 0, 2, 1, 8) # move processing to threading
-                self.click_box.setChecked(False)
-                self.indicator.setText("0/0")
-                self.key_label.setText("")
-                return
+    def draw_graph(self, result: list[helper.Segment] = None):
+        if result is not None:
+            self.current_segments = result
 
-            self.current_segments = []
-            segments = database.to_lst(json_sequence)
-            durations = database.to_lst(json_durations)
-            for i in range(len(segments)):
-                duration = [float(a) for a in durations[i]]
-                self.current_segments.append(helper.Segment(
-                    segments[i], filename, pos, duration, key))
+        # Assign current row only if we have data to draw
+        self.current_row = self.current_segments[0].filename
+
+        pos = self.graph_positions[self.current_segments[0].filename]
+        filename = self.current_segments[0].filename
 
         if self.current_segments[pos] in self.sequences:
             self.click_box.setChecked(True)
@@ -276,7 +252,7 @@ class Window(QWidget):
         if self.figure is not None:
             self.figure.close()
 
-        self.key_label.setText(segment.get_key()) # bug here does not show after regen
+        self.key_label.setText(segment.get_key())  # bug here does not show after regen
         part = segment.part
         plot = part.plot(doneAction=None)
         self.figure = MplCanvas(plot.figure)
@@ -284,6 +260,25 @@ class Window(QWidget):
         self.indicator.setText(
             f"{self.graph_positions[filename] + 1}/{len(self.current_segments)}")
         self.current_segment = segment
+
+    def on_listbox_click(self, filename):
+        if self.current_segments is None or filename != self.current_row:
+            fetch = workers.FetchDataWorker(filename)
+            fetch.signals.result.connect(self.draw_graph)
+            fetch.signals.error.connect(self.fetch_failed)
+            self.threadpool.start(fetch)
+        else:
+            self.draw_graph()
+
+    def fetch_failed(self, error):
+        if self.figure is not None:
+            self.figure.close()
+        fig = plt.figure()
+        self.figure = MplCanvas(fig)
+        self.layout.addWidget(self.figure, 0, 2, 1, 8)  # move processing to threading
+        self.click_box.setChecked(False)
+        self.indicator.setText("0/0")
+        self.key_label.setText("")
 
     def play(self):
         if self.current_segment is not None and not self.now_playing:
@@ -299,13 +294,13 @@ class Window(QWidget):
 
     def sequence_complete(self, filename):
         self.sequence_generating = False
-        self.draw_graph(filename)
+        self.on_listbox_click(filename)
 
     def on_button_sequence(self):
         if not self.sequence_generating:
             item = self.list_widget.currentItem().text()
             self.selector = InstrumentSelector(
-                item, self.threadpool, self.database)
+                item, self.threadpool)
             self.selector.show()
             self.selector.signals.finished.connect(self.sequence_complete)
             self.sequence_generating = True

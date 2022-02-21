@@ -4,7 +4,6 @@ from sqlite3 import Error
 from PyQt5.QtCore import QRunnable, pyqtSlot
 import json
 
-
 class Database:
     def __init__(self, path="music.db"):
         self.path = path
@@ -100,16 +99,3 @@ class Database:
     @staticmethod
     def to_lst(dump):
         return json.loads(dump)
-
-
-class DatabaseWorker(QRunnable, Database):
-    def __init__(self):
-        QRunnable.__init__(self)
-
-    @pyqtSlot()
-    def run(self):
-        Database.__init__(self)
-
-
-# database = Database()
-# database.insert("hello", "yoyoyo")

@@ -1,11 +1,11 @@
 import sys
-import sys
 import traceback
 from random import randint
 
 from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal
 
 import midi_helper as helper
+from database import Database
 from markov import Markov
 
 
@@ -17,10 +17,9 @@ class WorkerSignals(QObject):
 
 
 class SequenceWorker(QRunnable):
-    def __init__(self, item, database, filename, instrument):
+    def __init__(self, item, filename, instrument):
         super().__init__()
         self.signals = WorkerSignals()
-        self.database = database
         self.filename = filename
         self.instrument = instrument
         self.item = item
@@ -28,14 +27,12 @@ class SequenceWorker(QRunnable):
     @pyqtSlot()
     def run(self):
         try:
-
+            database = Database()
             # Extract the notes from midi file using midi helper
             midi_extraction = self.item
             midi_extraction.parse_midi(inst=self.instrument)
             chords = midi_extraction.get_chords()
             key = midi_extraction.get_key()
-
-            print(key)
 
             # Generate markov chain
             markov_chain = Markov(3)
@@ -64,9 +61,10 @@ class SequenceWorker(QRunnable):
                     except Exception as e:
                         print(e)
 
-            self.database.insert(self.filename, self.database.to_json(sequences), self.database.to_json(durations),
+            database.insert(self.filename, database.to_json(sequences), database.to_json(durations),
                                  str(key))
         except Exception as e:
+            print(e)
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
             self.signals.error.emit((exctype, value, traceback.format_exc()))
@@ -80,6 +78,7 @@ class PlayMidiWorker(QRunnable):
         self.current_segment = segment
         self.signals = WorkerSignals()
 
+    @pyqtSlot()
     def run(self) -> None:
         try:
             self.current_segment.play()
@@ -91,6 +90,32 @@ class PlayMidiWorker(QRunnable):
             self.signals.finished.emit("")
 
 
-class DatabaseWorker(QRunnable):
-    def __init__(self):
+class FetchDataWorker(QRunnable):
+    def __init__(self, filename):
         QRunnable.__init__(self)
+        self.filename = filename
+        self.signals = WorkerSignals()
+
+    @pyqtSlot()
+    def run(self) -> None:
+        current_segments = None
+        try:
+            database = Database()
+            json_sequence = database.get_sequence(self.filename)
+            json_durations = database.get_durations(self.filename)
+            key = database.get_key(self.filename)
+
+            current_segments = []
+            segments = database.to_lst(json_sequence)
+            durations = database.to_lst(json_durations)
+            for i in range(len(segments)):
+                duration = [float(a) for a in durations[i]]
+                current_segments.append(helper.Segment(
+                    segments[i], self.filename, i, duration, key))
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        finally:
+            if current_segments is not None:
+                self.signals.result.emit(current_segments)
