@@ -57,7 +57,8 @@ class GeneratorPopup(QWidget):
             print("Music already playing")
 
     def export(self):
-        self.segment.write_to_midi(export=True)
+        filename = QFileDialog.getSaveFileName(self, 'Save File', directory="./out")
+        self.segment.write_to_midi(export=True, filename=filename[0])
 
     def playing_complete(self):
         self.now_playing = False

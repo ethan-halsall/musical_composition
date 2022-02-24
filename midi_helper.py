@@ -48,7 +48,7 @@ class Generate:
             if char in self.dict:
                 state = states[char]
                 curr = self.dict[char].get_segment()
-                if state < len(curr)/4: # use 4 notes for now, since we are generating sequences of 4^n
+                if state < len(curr) / 4:  # use 4 notes for now, since we are generating sequences of 4^n
                     out.append(curr[state])
                     out.append(curr[state + 1])
                     out.append(curr[state + 2])
@@ -81,7 +81,7 @@ class Segment:
         part.append(instrument.Piano())
         for i in range(len(self.segment)):
             note = self.segment[i]
-            #duration = self.durations[i]
+            # duration = self.durations[i]
 
             if note == "rest":
                 part.append(Rest(quarterLength=1))
@@ -90,10 +90,10 @@ class Segment:
 
         return part
 
-    def write_to_midi(self, export=False):
+    def write_to_midi(self, export=False, filename=None):
         mf = streamToMidiFile(self.part)
         if export:
-            mf.open(f"out/{self.index}_{self.filename}", 'wb')
+            mf.open(filename, 'wb')
         else:
             mf.open(f"tmp/{self.index}_{self.filename}", 'wb')
         mf.write()
@@ -153,7 +153,7 @@ class Extract:
                     # chords
                     elif isinstance(element, chord.Chord):
                         self._chords.append(' '.join(str(n.pitch)
-                                            for n in element))
+                                                     for n in element))
                         self._durations.append(element.quarterLength)
                     # rests
                     elif isinstance(element, note.Rest):
