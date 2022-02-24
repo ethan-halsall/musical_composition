@@ -39,14 +39,26 @@ class Generate:
         return out
 
     def convert_to_sequence(self, melody):
+        states = {}
+        for key, _ in self.dict.items():
+            states[key] = 0
+
         out = []
         for char in melody:
             if char in self.dict:
-                out.append(self.dict[char])
-
+                state = states[char]
+                curr = self.dict[char].get_segment()
+                if state < len(curr)/4: # use 4 notes for now, since we are generating sequences of 4^n
+                    out.append(curr[state])
+                    out.append(curr[state + 1])
+                    out.append(curr[state + 2])
+                    out.append(curr[state + 3])
+                    states[char] += 1
+                else:
+                    states[char] += 0
         return out
 
-    # Pretty generic rules - todo improve these
+    # Pretty generic rules - todo improve these, introduce some bias
     def generate_rules(self):
         rules = {}
         for key, _ in self.dict.items():
@@ -69,7 +81,7 @@ class Segment:
         part.append(instrument.Piano())
         for i in range(len(self.segment)):
             note = self.segment[i]
-            duration = self.durations[i]
+            #duration = self.durations[i]
 
             if note == "rest":
                 part.append(Rest(quarterLength=1))

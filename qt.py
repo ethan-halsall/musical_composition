@@ -312,17 +312,19 @@ class Window(QWidget):
         if self.sequences:
             gen = helper.Generate(self.sequences, rules)
             gen.generate_rules()
-            melody = gen.l_system(gen.axiom, 2)
-            sequences = gen.convert_to_sequence(melody)
+            melody = gen.l_system(gen.axiom, 8)
+            print(gen.rules)
+            notes = gen.convert_to_sequence(melody)
 
-            notes = []
+            durations = []
+            """notes = []
             durations = []
             for sequence in sequences:
                 notes += sequence.get_segment()
-                durations += sequence.durations
+                durations += sequence.durations"""
 
             segment = helper.Segment(
-                notes, "test.mid", 0, durations, sequences[0].key)
+                notes, "test.mid", 0, durations, "")
 
             self.popup = GeneratorPopup(segment, self.threadpool)
             self.popup.show()
