@@ -9,11 +9,83 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 import midi_helper as helper
 import workers
 
+from dataclasses import dataclass
+
+from configparser import ConfigParser
+
+
+@dataclass()
+class Settings:
+    order: int = 3
+    prune: bool = True
+    multiple_channels: bool = False
+
 
 class MplCanvas(FigureCanvasQTAgg):
     def __init__(self, figure):
         fig = figure
         super(MplCanvas, self).__init__(fig)
+
+
+class SettingsPopup(QWidget):
+    def __init__(self, settings):
+        QWidget.__init__(self)
+        self.settings = settings
+        self.layout = QGridLayout()
+        self.setLayout(self.layout)
+        self.list_widget = QListWidget()
+        self.setWindowTitle("Settings")
+
+        # Markov order
+        self.order_label = QLabel()
+        self.order_label.setText("Markov chain order")
+        self.order_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.order_label, 0, 0)
+
+        self.order_text_field = QLineEdit()
+        self.order_text_field.setMaxLength(1)
+        self.order_text_field.setPlaceholderText(str(self.settings.order))
+        self.layout.addWidget(self.order_text_field, 0, 1)
+
+        # Multiple channels
+        self.multiple_channels_label = QLabel()
+        self.multiple_channels_label.setText("Multiple instruments")
+        self.multiple_channels_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.multiple_channels_label, 1, 0)
+        self.multiple_channels_checkbox = QCheckBox()
+        self.multiple_channels_checkbox.setChecked(
+            self.settings.multiple_channels)
+        self.layout.addWidget(self.multiple_channels_checkbox, 1, 1)
+
+        # Prune
+        self.prune_label = QLabel()
+        self.prune_label.setText("Prune segments")
+        self.prune_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.prune_label, 2, 0)
+        self.prune_checkbox = QCheckBox()
+        self.prune_checkbox.setChecked(self.settings.prune)
+        self.layout.addWidget(self.prune_checkbox, 2, 1)
+
+        # Save button
+        self.button_save = QPushButton()
+        self.button_save.setText("Save")
+        self.button_save.clicked.connect(self.on_save)
+        self.layout.addWidget(self.button_save, 3, 0)
+
+        # Cancel button
+        self.cancel_save = QPushButton()
+        self.cancel_save.setText("Cancel")
+        self.cancel_save.clicked.connect(self.quit)
+        self.layout.addWidget(self.cancel_save, 3, 1)
+
+    def quit(self):
+        self.destroy()
+
+    def on_save(self):
+        pass
+
+    def save(self):
+        self.destroy()
 
 
 class GeneratorPopup(QWidget):
@@ -57,7 +129,8 @@ class GeneratorPopup(QWidget):
             print("Music already playing")
 
     def export(self):
-        filename = QFileDialog.getSaveFileName(self, 'Save File', directory="./out", filter="Midi files (*.mid)")
+        filename = QFileDialog.getSaveFileName(
+            self, 'Save File', directory="./out", filter="Midi files (*.mid)")
         if filename[0] != '':
             self.segment.write_to_midi(export=True, filename=filename[0])
 
@@ -75,6 +148,7 @@ class InstrumentSelector(QWidget):
         self.filename = filename
         self.layout.addWidget(self.list_widget)
         self.threadpool = threadpool
+        self.setWindowTitle("Instruments")
 
         self.midi_extraction = None
 
@@ -91,7 +165,6 @@ class InstrumentSelector(QWidget):
 
     def display_midi_data(self, midi_extraction):
         self.midi_extraction = midi_extraction
-        # print(self.midi_extraction.get_key())
         for count, inst in enumerate(midi_extraction.get_instruments()):
             self.list_widget.insertItem(count, str(inst))
 
@@ -131,11 +204,13 @@ class ProcessMidiWorker(QRunnable):
 class Window(QWidget):
     def __init__(self):
         QWidget.__init__(self)
+        self.settings = Settings()
         self.selector = None
         self.layout = QGridLayout()
         self.setLayout(self.layout)
         self.list_widget = QListWidget()
         self.window().resize(1280, 720)
+        self.setWindowTitle("Composer")
 
         self.current_segments = None
         self.current_segment = None
@@ -196,9 +271,16 @@ class Window(QWidget):
         self.button_play.clicked.connect(self.play)
         self.layout.addWidget(self.button_play, 1, 7)
 
-        self.click_box = QCheckBox("Include")
-        self.click_box.clicked.connect(self.click_box_listener)
-        self.layout.addWidget(self.click_box, 2, 8)
+        # Create button for options
+        self.button_options = QPushButton()
+        self.button_options.setText("Options")
+        self.button_options.clicked.connect(self.open_options)
+        self.layout.addWidget(self.button_options, 1, 2)
+
+        # Create Checkbox
+        self.check_box = QCheckBox("Include")
+        self.check_box.clicked.connect(self.click_box_listener)
+        self.layout.addWidget(self.check_box, 2, 8)
 
         # Key label
         self.key_label = QLabel()
@@ -207,9 +289,13 @@ class Window(QWidget):
 
         # self.draw_graph(files[0], pos=0) this needs to be run after constructor
 
+    def open_options(self):
+        self.popup = SettingsPopup(self.settings)
+        self.popup.show()
+
     def click_box_listener(self):
         segment = self.current_segment
-        if self.click_box.isChecked():
+        if self.check_box.isChecked():
             self.sequences.append(segment)
         else:
             self.sequences.remove(segment)
@@ -245,16 +331,17 @@ class Window(QWidget):
         filename = self.current_segments[0].filename
 
         if self.current_segments[pos] in self.sequences:
-            self.click_box.setChecked(True)
+            self.check_box.setChecked(True)
         else:
-            self.click_box.setChecked(False)
+            self.check_box.setChecked(False)
 
         segment = self.current_segments[pos]
 
         if self.figure is not None:
             self.figure.close()
 
-        self.key_label.setText(segment.get_key())  # bug here does not show after regen
+        # bug here does not show after regen
+        self.key_label.setText(segment.get_key())
         part = segment.part
         plot = part.plot(doneAction=None)
         self.figure = MplCanvas(plot.figure)
@@ -277,8 +364,8 @@ class Window(QWidget):
             self.figure.close()
         fig = plt.figure()
         self.figure = MplCanvas(fig)
-        self.layout.addWidget(self.figure, 0, 2, 1, 8)  # move processing to threading
-        self.click_box.setChecked(False)
+        self.layout.addWidget(self.figure, 0, 2, 1, 8)
+        self.check_box.setChecked(False)
         self.indicator.setText("0/0")
         self.key_label.setText("")
 
