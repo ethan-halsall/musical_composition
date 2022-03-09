@@ -1,10 +1,13 @@
 import os
+from math import floor
 from shutil import move
 
+import numpy as np
 from music21 import converter, instrument, note, chord
 from music21.chord import Chord
 from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
+from music21.pitch import PitchException
 from music21.stream import Part
 import string
 from random import choice
@@ -44,19 +47,21 @@ class Generate:
             states[key] = 0
 
         out = []
+        durations = []
         for char in melody:
             if char in self.dict:
                 state = states[char]
                 curr = self.dict[char].get_segment()
+                curr_dur = self.dict[char].get_durations()
                 if state < len(curr) / 4:  # use 4 notes for now, since we are generating sequences of 4^n
-                    out.append(curr[state])
-                    out.append(curr[state + 1])
-                    out.append(curr[state + 2])
-                    out.append(curr[state + 3])
+                    for i in range(4):
+                        out.append(curr[state + i])
+                        durations.append(curr_dur[state + i])
+
                     states[char] += 1
                 else:
                     states[char] += 0
-        return out
+        return out, durations
 
     # Pretty generic rules - todo improve these, introduce some bias
     def generate_rules(self):
@@ -68,7 +73,7 @@ class Generate:
 
 
 class Segment:
-    def __init__(self, segment, filename, index, durations, key):
+    def __init__(self, segment, filename, index, durations, key, do_prune):
         self.segment = segment
         self.durations = durations
         self.filename = filename
@@ -76,17 +81,20 @@ class Segment:
         self.key = key
         self.part = self.__to_part()
 
+        if do_prune:
+            self.prune()
+
     def __to_part(self):
         part = Part()
         part.append(instrument.Piano())
         for i in range(len(self.segment)):
             note = self.segment[i]
-            # duration = self.durations[i]
+            duration = self.durations[i]
 
             if note == "rest":
-                part.append(Rest(quarterLength=1))
+                part.append(Rest(quarterLength=duration))
             else:
-                part.append(Chord(note, quarterLength=1))
+                part.append(Chord(note, quarterLength=duration))
 
         return part
 
@@ -116,6 +124,36 @@ class Segment:
 
     def get_key(self):
         return self.key
+
+    def get_durations(self):
+        return self.durations
+
+    def prune(self):
+        notes = self.segment
+        midi = []
+
+        for note in notes:
+            try:
+                pitches = Chord(note).pitches
+                avg = 0
+                for pitch in pitches:
+                    avg += int(pitch.midi)
+                midi.append(avg / len(pitches))
+            except PitchException:
+                pass
+
+        distances = []
+        for (x, y) in zip(midi, midi[1:]):
+            distances.append(abs(floor(x - y)))
+
+        std = np.std(distances)
+        mean = np.mean(distances)
+
+        for i in range(len(distances)):
+            if distances[i] > mean + (2 * std):
+                notes[i - 1] = notes[i]
+                print(notes)
+        self.segment = notes
 
 
 class Extract:

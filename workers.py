@@ -17,12 +17,13 @@ class WorkerSignals(QObject):
 
 
 class SequenceWorker(QRunnable):
-    def __init__(self, item, filename, instrument):
+    def __init__(self, item, filename, instrument, markov_depth):
         super().__init__()
         self.signals = WorkerSignals()
         self.filename = filename
         self.instrument = instrument
         self.item = item
+        self.depth = markov_depth
 
     @pyqtSlot()
     def run(self):
@@ -35,7 +36,7 @@ class SequenceWorker(QRunnable):
             key = midi_extraction.get_key()
 
             # Generate markov chain
-            markov_chain = Markov(3)
+            markov_chain = Markov(self.depth)
             markov = markov_chain.transition_matrix(chords)
             float_durations = [float(a)
                                for a in midi_extraction.get_durations()]
@@ -91,9 +92,10 @@ class PlayMidiWorker(QRunnable):
 
 
 class FetchDataWorker(QRunnable):
-    def __init__(self, filename):
+    def __init__(self, filename, do_prune):
         QRunnable.__init__(self)
         self.filename = filename
+        self.do_prune = do_prune
         self.signals = WorkerSignals()
 
     @pyqtSlot()
@@ -111,7 +113,7 @@ class FetchDataWorker(QRunnable):
             for i in range(len(segments)):
                 duration = [float(a) for a in durations[i]]
                 current_segments.append(helper.Segment(
-                    segments[i], self.filename, i, duration, key))
+                    segments[i], self.filename, i, duration, key, self.do_prune))
         except:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]

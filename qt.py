@@ -9,7 +9,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 import midi_helper as helper
 import workers
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 from configparser import ConfigParser
 
@@ -18,7 +18,7 @@ from configparser import ConfigParser
 class Settings:
     order: int = 3
     prune: bool = True
-    multiple_channels: bool = False
+    # multiple_channels: bool = False
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -34,7 +34,9 @@ class SettingsPopup(QWidget):
         self.layout = QGridLayout()
         self.setLayout(self.layout)
         self.list_widget = QListWidget()
-        self.setWindowTitle("Settings")
+        self.setWindowTitle("Options")
+
+        self.signals = workers.WorkerSignals()
 
         # Markov order
         self.order_label = QLabel()
@@ -44,10 +46,10 @@ class SettingsPopup(QWidget):
 
         self.order_text_field = QLineEdit()
         self.order_text_field.setMaxLength(1)
-        self.order_text_field.setPlaceholderText(str(self.settings.order))
+        self.order_text_field.setText(str(self.settings.order))
         self.layout.addWidget(self.order_text_field, 0, 1)
 
-        # Multiple channels
+        """# Multiple channels
         self.multiple_channels_label = QLabel()
         self.multiple_channels_label.setText("Multiple instruments")
         self.multiple_channels_label.setAlignment(Qt.AlignCenter)
@@ -55,7 +57,7 @@ class SettingsPopup(QWidget):
         self.multiple_channels_checkbox = QCheckBox()
         self.multiple_channels_checkbox.setChecked(
             self.settings.multiple_channels)
-        self.layout.addWidget(self.multiple_channels_checkbox, 1, 1)
+        self.layout.addWidget(self.multiple_channels_checkbox, 1, 1)"""
 
         # Prune
         self.prune_label = QLabel()
@@ -82,9 +84,8 @@ class SettingsPopup(QWidget):
         self.destroy()
 
     def on_save(self):
-        pass
-
-    def save(self):
+        settings = Settings(int(self.order_text_field.text()), self.prune_checkbox.isChecked())
+        self.signals.result.emit(settings)
         self.destroy()
 
 
@@ -139,7 +140,7 @@ class GeneratorPopup(QWidget):
 
 
 class InstrumentSelector(QWidget):
-    def __init__(self, filename, threadpool):
+    def __init__(self, filename, threadpool, settings):
         QWidget.__init__(self)
         self.layout = QGridLayout()
         self.setLayout(self.layout)
@@ -149,6 +150,7 @@ class InstrumentSelector(QWidget):
         self.layout.addWidget(self.list_widget)
         self.threadpool = threadpool
         self.setWindowTitle("Instruments")
+        self.settings = settings
 
         self.midi_extraction = None
 
@@ -179,7 +181,7 @@ class InstrumentSelector(QWidget):
         item = self.list_widget.currentItem().text()
 
         worker = workers.SequenceWorker(
-            self.midi_extraction, self.filename, item)
+            self.midi_extraction, self.filename, item, self.settings.order)
         self.threadpool.start(worker)
         worker.signals.finished.connect(self.sequence_complete)
 
@@ -291,7 +293,22 @@ class Window(QWidget):
 
     def open_options(self):
         self.popup = SettingsPopup(self.settings)
+        self.popup.signals.result.connect(self.update_settings)
         self.popup.show()
+
+    def update_settings(self, settings):
+        old = self.settings
+        self.settings = settings
+
+        if settings.order != old.order:
+            #self.on_button_sequence() #either message of warning saying it will not update current setup or update all...?
+            pass
+        elif settings.prune != old.prune:
+            # Redraw current graph
+            if self.current_segments is not None:
+                print(self.current_row)
+                self.on_listbox_click(self.current_row, update=True)
+
 
     def click_box_listener(self):
         segment = self.current_segment
@@ -350,9 +367,9 @@ class Window(QWidget):
             f"{self.graph_positions[filename] + 1}/{len(self.current_segments)}")
         self.current_segment = segment
 
-    def on_listbox_click(self, filename):
-        if self.current_segments is None or filename != self.current_row:
-            fetch = workers.FetchDataWorker(filename)
+    def on_listbox_click(self, filename, update=False):
+        if self.current_segments is None or filename != self.current_row or update:
+            fetch = workers.FetchDataWorker(filename, self.settings.prune)
             fetch.signals.result.connect(self.draw_graph)
             fetch.signals.error.connect(self.fetch_failed)
             self.threadpool.start(fetch)
@@ -389,7 +406,7 @@ class Window(QWidget):
         if not self.sequence_generating:
             item = self.list_widget.currentItem().text()
             self.selector = InstrumentSelector(
-                item, self.threadpool)
+                item, self.threadpool, self.settings)
             self.selector.show()
             self.selector.signals.finished.connect(self.sequence_complete)
             self.sequence_generating = True
@@ -401,19 +418,21 @@ class Window(QWidget):
         if self.sequences:
             gen = helper.Generate(self.sequences, rules)
             gen.generate_rules()
-            melody = gen.l_system(gen.axiom, 8)
+            melody = gen.l_system(gen.axiom, 12)
             print(gen.rules)
-            notes = gen.convert_to_sequence(melody)
+            notes, durations = gen.convert_to_sequence(melody)
 
-            durations = []
-            """notes = []
+            print(durations)
+
+            """  durations = []
+            notes = []
             durations = []
             for sequence in sequences:
                 notes += sequence.get_segment()
                 durations += sequence.durations"""
 
             segment = helper.Segment(
-                notes, "test.mid", 0, durations, "")
+                notes, "test.mid", 0, durations, "", self.settings.prune)
 
             self.popup = GeneratorPopup(segment, self.threadpool)
             self.popup.show()
