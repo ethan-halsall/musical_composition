@@ -73,16 +73,19 @@ class Generate:
 
 
 class Segment:
-    def __init__(self, segment, filename, index, durations, key, do_prune):
+    def __init__(self, segment, filename, index, durations, key, do_prune, do_quantize):
         self.segment = segment
         self.durations = durations
         self.filename = filename
         self.index = index
         self.key = key
         self.part = self.__to_part()
-
+        
         if do_prune:
             self.prune()
+
+        if do_quantize:
+            self.quantize()
 
     def __to_part(self):
         part = Part()
@@ -119,15 +122,6 @@ class Segment:
         # Remove temporary midi file from /tmp
         os.remove(f"tmp/{self.index}_{self.filename}")
 
-    def get_segment(self):
-        return self.segment
-
-    def get_key(self):
-        return self.key
-
-    def get_durations(self):
-        return self.durations
-
     def prune(self):
         notes = self.segment
         midi = []
@@ -154,6 +148,24 @@ class Segment:
                 notes[i - 1] = notes[i]
                 print(notes)
         self.segment = notes
+
+    def quantize(self):
+        curr = 0
+        for i in range(len(self.durations)):
+            if (curr + self.durations[i] / 4) > 1:
+                self.durations[i] = 4 - curr
+                curr = 0
+            else:
+                curr += self.durations[i]
+
+    def get_segment(self):
+        return self.segment
+
+    def get_key(self):
+        return self.key
+
+    def get_durations(self):
+        return self.durations
 
 
 class Extract:

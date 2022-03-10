@@ -19,6 +19,7 @@ class Settings:
     order: int = 3
     prune: bool = True
     max_length: int = 4
+    quantize: bool = True
     # multiple_channels: bool = False
 
 
@@ -71,26 +72,35 @@ class SettingsPopup(QWidget):
         self.max_length_text_field.setText(str(self.settings.max_length))
         self.layout.addWidget(self.max_length_text_field, 2, 1)
 
+        # Quantization
+        self.quantization_label = QLabel()
+        self.quantization_label.setText("Quantize durations")
+        self.quantization_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.quantization_label, 3, 0)
+        self.quantization_checkbox = QCheckBox()
+        self.quantization_checkbox.setChecked(self.settings.quantize)
+        self.layout.addWidget(self.quantization_checkbox, 3, 1)
+
         # Prune
         self.prune_label = QLabel()
         self.prune_label.setText("Prune segments")
         self.prune_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.prune_label, 3, 0)
+        self.layout.addWidget(self.prune_label, 4, 0)
         self.prune_checkbox = QCheckBox()
         self.prune_checkbox.setChecked(self.settings.prune)
-        self.layout.addWidget(self.prune_checkbox, 3, 1)
+        self.layout.addWidget(self.prune_checkbox, 4, 1)
 
         # Save button
         self.button_save = QPushButton()
         self.button_save.setText("Save")
         self.button_save.clicked.connect(self.on_save)
-        self.layout.addWidget(self.button_save, 4, 0)
+        self.layout.addWidget(self.button_save, 5, 0)
 
         # Cancel button
         self.cancel_save = QPushButton()
         self.cancel_save.setText("Cancel")
         self.cancel_save.clicked.connect(self.quit)
-        self.layout.addWidget(self.cancel_save, 4, 1)
+        self.layout.addWidget(self.cancel_save, 5, 1)
 
     def quit(self):
         self.destroy()
@@ -98,7 +108,8 @@ class SettingsPopup(QWidget):
     def on_save(self):
         settings = Settings(int(self.order_text_field.text()),
                             self.prune_checkbox.isChecked(),
-                            int(self.max_length_text_field.text()))
+                            int(self.max_length_text_field.text()),
+                            self.quantization_checkbox.isChecked())
         self.signals.result.emit(settings)
         self.destroy()
 
@@ -382,7 +393,7 @@ class Window(QWidget):
 
     def on_listbox_click(self, filename, update=False):
         if self.current_segments is None or filename != self.current_row or update:
-            fetch = workers.FetchDataWorker(filename, self.settings.prune)
+            fetch = workers.FetchDataWorker(filename, self.settings.prune, self.settings.quantize)
             fetch.signals.result.connect(self.draw_graph)
             fetch.signals.error.connect(self.fetch_failed)
             self.threadpool.start(fetch)

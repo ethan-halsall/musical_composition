@@ -64,7 +64,7 @@ class SequenceWorker(QRunnable):
                         print(e)
 
             database.insert(self.filename, database.to_json(sequences), database.to_json(durations),
-                                 str(key))
+                            str(key))
         except Exception as e:
             print(e)
             traceback.print_exc()
@@ -93,10 +93,11 @@ class PlayMidiWorker(QRunnable):
 
 
 class FetchDataWorker(QRunnable):
-    def __init__(self, filename, do_prune):
+    def __init__(self, filename, do_prune, quantize):
         QRunnable.__init__(self)
         self.filename = filename
         self.do_prune = do_prune
+        self.do_quantize = quantize
         self.signals = WorkerSignals()
 
     @pyqtSlot()
@@ -114,7 +115,7 @@ class FetchDataWorker(QRunnable):
             for i in range(len(segments)):
                 duration = [float(a) for a in durations[i]]
                 current_segments.append(helper.Segment(
-                    segments[i], self.filename, i, duration, key, self.do_prune))
+                    segments[i], self.filename, i, duration, key, self.do_prune, self.do_quantize))
         except:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
