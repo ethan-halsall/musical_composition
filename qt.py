@@ -84,7 +84,8 @@ class SettingsPopup(QWidget):
         self.destroy()
 
     def on_save(self):
-        settings = Settings(int(self.order_text_field.text()), self.prune_checkbox.isChecked())
+        settings = Settings(int(self.order_text_field.text()),
+                            self.prune_checkbox.isChecked())
         self.signals.result.emit(settings)
         self.destroy()
 
@@ -301,14 +302,13 @@ class Window(QWidget):
         self.settings = settings
 
         if settings.order != old.order:
-            #self.on_button_sequence() #either message of warning saying it will not update current setup or update all...?
+            # self.on_button_sequence() #either message of warning saying it will not update current setup or update all...?
             pass
         elif settings.prune != old.prune:
             # Redraw current graph
             if self.current_segments is not None:
                 print(self.current_row)
                 self.on_listbox_click(self.current_row, update=True)
-
 
     def click_box_listener(self):
         segment = self.current_segment
@@ -400,7 +400,7 @@ class Window(QWidget):
 
     def sequence_complete(self, filename):
         self.sequence_generating = False
-        self.on_listbox_click(filename)
+        self.on_listbox_click(filename, update=True)
 
     def on_button_sequence(self):
         if not self.sequence_generating:
