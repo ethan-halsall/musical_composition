@@ -18,6 +18,7 @@ from configparser import ConfigParser
 class Settings:
     order: int = 3
     prune: bool = True
+    max_length: int = 4
     # multiple_channels: bool = False
 
 
@@ -59,33 +60,45 @@ class SettingsPopup(QWidget):
             self.settings.multiple_channels)
         self.layout.addWidget(self.multiple_channels_checkbox, 1, 1)"""
 
+        # Max length of segment
+        self.max_length_label = QLabel()
+        self.max_length_label.setText("Maximum length of segment")
+        self.max_length_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.max_length_label, 2, 0)
+
+        self.max_length_text_field = QLineEdit()
+        self.max_length_text_field.setMaxLength(2)
+        self.max_length_text_field.setText(str(self.settings.max_length))
+        self.layout.addWidget(self.max_length_text_field, 2, 1)
+
         # Prune
         self.prune_label = QLabel()
         self.prune_label.setText("Prune segments")
         self.prune_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.prune_label, 2, 0)
+        self.layout.addWidget(self.prune_label, 3, 0)
         self.prune_checkbox = QCheckBox()
         self.prune_checkbox.setChecked(self.settings.prune)
-        self.layout.addWidget(self.prune_checkbox, 2, 1)
+        self.layout.addWidget(self.prune_checkbox, 3, 1)
 
         # Save button
         self.button_save = QPushButton()
         self.button_save.setText("Save")
         self.button_save.clicked.connect(self.on_save)
-        self.layout.addWidget(self.button_save, 3, 0)
+        self.layout.addWidget(self.button_save, 4, 0)
 
         # Cancel button
         self.cancel_save = QPushButton()
         self.cancel_save.setText("Cancel")
         self.cancel_save.clicked.connect(self.quit)
-        self.layout.addWidget(self.cancel_save, 3, 1)
+        self.layout.addWidget(self.cancel_save, 4, 1)
 
     def quit(self):
         self.destroy()
 
     def on_save(self):
         settings = Settings(int(self.order_text_field.text()),
-                            self.prune_checkbox.isChecked())
+                            self.prune_checkbox.isChecked(),
+                            int(self.max_length_text_field.text()))
         self.signals.result.emit(settings)
         self.destroy()
 
@@ -182,7 +195,7 @@ class InstrumentSelector(QWidget):
         item = self.list_widget.currentItem().text()
 
         worker = workers.SequenceWorker(
-            self.midi_extraction, self.filename, item, self.settings.order)
+            self.midi_extraction, self.filename, item, self.settings.order, self.settings.max_length)
         self.threadpool.start(worker)
         worker.signals.finished.connect(self.sequence_complete)
 
@@ -421,8 +434,6 @@ class Window(QWidget):
             melody = gen.l_system(gen.axiom, 12)
             print(gen.rules)
             notes, durations = gen.convert_to_sequence(melody)
-
-            print(durations)
 
             """  durations = []
             notes = []

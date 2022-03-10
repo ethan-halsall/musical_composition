@@ -17,13 +17,14 @@ class WorkerSignals(QObject):
 
 
 class SequenceWorker(QRunnable):
-    def __init__(self, item, filename, instrument, markov_depth):
+    def __init__(self, item, filename, instrument, markov_depth, max_length):
         super().__init__()
         self.signals = WorkerSignals()
         self.filename = filename
         self.instrument = instrument
         self.item = item
         self.depth = markov_depth
+        self.max_length = max_length
 
     @pyqtSlot()
     def run(self):
@@ -51,7 +52,7 @@ class SequenceWorker(QRunnable):
                 while not success:
                     try:
                         # Generate a segment of length some power 2^n
-                        length = 2 ** randint(2, 4)
+                        length = 2 ** randint(2, self.max_length)
                         notes = markov_chain.generate_sequence(
                             markov, length=length)
                         durations.append(markov_chain.generate_sequence(
