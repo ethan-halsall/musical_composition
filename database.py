@@ -1,8 +1,7 @@
+import json
 import sqlite3
 from sqlite3 import Error
 
-from PyQt5.QtCore import QRunnable, pyqtSlot
-import json
 
 class Database:
     def __init__(self, path="music.db"):

@@ -441,9 +441,9 @@ class Window(QWidget):
         rules = {"a": "b", "b": "ba", "c": "bc"}
         if self.sequences:
             gen = helper.Generate(self.sequences, rules)
-            gen.generate_rules()
-            melody = gen.l_system(gen.axiom, 12)
-            print(gen.rules)
+            #gen.generate_rules()
+            melody = gen.l_system(gen.axiom, 3)
+            print(melody)
             notes, durations = gen.convert_to_sequence(melody)
 
             """  durations = []
@@ -454,7 +454,7 @@ class Window(QWidget):
                 durations += sequence.durations"""
 
             segment = helper.Segment(
-                notes, "test.mid", 0, durations, "", self.settings.prune)
+                notes, "test.mid", 0, durations, "", self.settings.prune, self.settings.quantize)
 
             self.popup = GeneratorPopup(segment, self.threadpool)
             self.popup.show()

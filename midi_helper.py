@@ -16,8 +16,9 @@ from random import choice
 class Generate:
     def __init__(self, segments, rules):
         self.segments = segments
-        self.dict, self.axiom = self.generate_dict()
+        self.dict, self.alphabet = self.generate_dict()
         self.rules = rules
+        self.axiom = choice(self.alphabet)
 
     def generate_dict(self):
         dict = {}
@@ -53,21 +54,30 @@ class Generate:
                 state = states[char]
                 curr = self.dict[char].get_segment()
                 curr_dur = self.dict[char].get_durations()
-                if state < len(curr) / 4:  # use 4 notes for now, since we are generating sequences of 4^n
-                    for i in range(4):
-                        out.append(curr[state + i])
-                        durations.append(curr_dur[state + i])
+
+                # Make sure we round down using floor
+                if state < floor(len(curr) / 4):  # use 4 notes for now, since we are generating sequences of 4^n
+                    curr_state = 4 * (1 + state)
+
+                    for i in range(curr_state):
+                        out.append(curr[i])
+                        durations.append(curr_dur[i])
 
                     states[char] += 1
                 else:
-                    states[char] += 0
+                    states[char] = 0
+
         return out, durations
 
-    # Pretty generic rules - todo improve these, introduce some bias
+    # Pretty generic rules - this needs serious work and testing
     def generate_rules(self):
         rules = {}
-        for key, _ in self.dict.items():
-            rules[key] = f"{choice(self.axiom)}{choice(self.axiom)}"
+        for i in range(len(self.alphabet)):
+            char = self.alphabet[i]
+            if i % 2 == 0 and i + 2 < len(self.alphabet):
+                rules[char] = f"{self.alphabet[i + 2]}"
+            else:
+                rules[char] = f"{char}{self.alphabet[i-1]}"
 
         self.rules = rules
 
@@ -146,13 +156,12 @@ class Segment:
         for i in range(len(distances)):
             if distances[i] > mean + (2 * std):
                 notes[i - 1] = notes[i]
-                print(notes)
         self.segment = notes
 
-    def quantize(self):
+    def quantize(self): # not sure if this 100% works
         curr = 0
         for i in range(len(self.durations)):
-            if (curr + self.durations[i] / 4) > 1:
+            if ((curr + self.durations[i]) / 4) > 1:
                 self.durations[i] = 4 - curr
                 curr = 0
             else:
