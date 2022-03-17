@@ -18,7 +18,7 @@ class Generate:
         self.segments = segments
         self.dict, self.alphabet = self.generate_dict()
         self.rules = rules
-        self.axiom = choice(self.alphabet)
+        self.axiom = self.alphabet[0]
 
     def generate_dict(self):
         dict = {}
@@ -72,13 +72,15 @@ class Generate:
     # Pretty generic rules - this needs serious work and testing
     def generate_rules(self):
         rules = {}
-        for i in range(len(self.alphabet)):
+        num_rules = floor(len(self.alphabet) / 4) + 1
+        for i in range(num_rules):
             char = self.alphabet[i]
             if i % 2 == 0 and i + 2 < len(self.alphabet):
-                rules[char] = f"{self.alphabet[i + 2]}"
+                rules[char] = "".join(self.alphabet)
             else:
-                rules[char] = f"{char}{self.alphabet[i-1]}"
+                rules[char] = f"{char}{choice(self.alphabet)}"
 
+        print(rules)
         self.rules = rules
 
 

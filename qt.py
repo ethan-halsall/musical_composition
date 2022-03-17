@@ -441,7 +441,7 @@ class Window(QWidget):
         rules = {"a": "b", "b": "ba", "c": "bc"}
         if self.sequences:
             gen = helper.Generate(self.sequences, rules)
-            #gen.generate_rules()
+            gen.generate_rules()
             melody = gen.l_system(gen.axiom, 3)
             print(melody)
             notes, durations = gen.convert_to_sequence(melody)

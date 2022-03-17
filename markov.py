@@ -17,7 +17,6 @@ class Markov:
                 key = ",".join(transitions[x:x + self.order + 1])
                 if key not in sequences:
                     sequences[key] = 1
-
                 else:
                     sequences[key] += 1
 
