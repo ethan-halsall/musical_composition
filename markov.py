@@ -53,6 +53,9 @@ class Markov:
             probs = cur.values.flatten().tolist()
             note_index = np.random.choice(cur.size, p=probs)
             note = columns[note_index]
-            cur = df.loc[[",".join(notes[i + 1:i + self.order]) + f",{note}"]]
+            if self.order > 1:
+                cur = df.loc[[",".join(notes[i + 1:i + self.order]) + f",{note}"]]
+            else:
+                cur = df.loc[[f"{note}"]]
             notes.append(note)
         return notes
