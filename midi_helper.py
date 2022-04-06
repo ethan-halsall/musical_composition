@@ -47,7 +47,7 @@ class Generate:
         for key, _ in self.dict.items():
             states[key] = 0
 
-        out = []
+        notes = []
         durations = []
         for char in melody:
             if char in self.dict:
@@ -55,21 +55,13 @@ class Generate:
                 curr = self.dict[char].get_notes()
                 curr_dur = self.dict[char].get_durations()
 
-                curr_state = 4 * (1 + state)
+                for i in range(state, state + 4):
+                    notes.append(curr[i % len(curr)])
+                    durations.append(curr_dur[i % len(curr_dur)])
+                states[char] += 4
 
-                # Make sure we round down using floor
-                if state < floor(len(curr) / 4):  # use 4 notes for now, since we are generating sequences of 4^n
-                    curr_state = 4 * (1 + state)
 
-                    for i in range(curr_state):
-                        out.append(curr[i])
-                        durations.append(curr_dur[i])
-
-                    states[char] += 1
-                else:
-                    states[char] = 0
-
-        return out, durations
+        return notes, durations
 
     # Pretty generic rules - this needs serious work and testing
     def generate_rules(self):
