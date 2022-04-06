@@ -52,8 +52,10 @@ class Generate:
         for char in melody:
             if char in self.dict:
                 state = states[char]
-                curr = self.dict[char].get_segment()
+                curr = self.dict[char].get_notes()
                 curr_dur = self.dict[char].get_durations()
+
+                curr_state = 4 * (1 + state)
 
                 # Make sure we round down using floor
                 if state < floor(len(curr) / 4):  # use 4 notes for now, since we are generating sequences of 4^n
@@ -85,14 +87,14 @@ class Generate:
 
 
 class Segment:
-    def __init__(self, segment, filename, index, durations, key, do_prune, do_quantize):
-        self.segment = segment
+    def __init__(self, notes, filename, index, durations, key, do_prune, do_quantize):
+        self.notes = notes
         self.durations = durations
         self.filename = filename
         self.index = index
         self.key = key
         self.part = self.__to_part()
-        
+
         if do_prune:
             self.prune()
 
@@ -102,8 +104,8 @@ class Segment:
     def __to_part(self):
         part = Part()
         part.append(instrument.Piano())
-        for i in range(len(self.segment)):
-            note = self.segment[i]
+        for i in range(len(self.notes)):
+            note = self.notes[i]
             duration = self.durations[i]
 
             if note == "rest":
@@ -135,7 +137,7 @@ class Segment:
         os.remove(f"tmp/{self.index}_{self.filename}")
 
     def prune(self):
-        notes = self.segment
+        notes = self.notes
         midi = []
 
         for note in notes:
@@ -158,19 +160,21 @@ class Segment:
         for i in range(len(distances)):
             if distances[i] > mean + (2 * std):
                 notes[i - 1] = notes[i]
-        self.segment = notes
+        self.notes = notes
 
-    def quantize(self): # not sure if this 100% works
+    def quantize(self):
         curr = 0
         for i in range(len(self.durations)):
-            if ((curr + self.durations[i]) / 4) > 1:
+            if curr % 4 == 0:
+                curr = self.durations[i]
+            elif ((curr + self.durations[i]) / 4) > 1:
                 self.durations[i] = 4 - curr
                 curr = 0
             else:
                 curr += self.durations[i]
 
-    def get_segment(self):
-        return self.segment
+    def get_notes(self):
+        return self.notes
 
     def get_key(self):
         return self.key
