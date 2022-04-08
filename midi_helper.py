@@ -42,7 +42,7 @@ class Generate:
             return self.l_system(out, n)
         return out
 
-    def convert_to_sequence(self, melody):
+    def convert_to_segments(self, melody):
         states = {}
         for key, _ in self.dict.items():
             states[key] = 0
@@ -59,7 +59,6 @@ class Generate:
                     notes.append(curr[i % len(curr)])
                     durations.append(curr_dur[i % len(curr_dur)])
                 states[char] += 4
-
 
         return notes, durations
 
