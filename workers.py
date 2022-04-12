@@ -33,7 +33,7 @@ class SequenceWorker(QRunnable):
             # Extract the notes from midi file using midi helper
             midi_extraction = self.item
             midi_extraction.parse_midi(inst=self.instrument)
-            chords = midi_extraction.get_chords()
+            chords = midi_extraction.get_notes()
             key = midi_extraction.get_key()
 
             # Generate markov chain

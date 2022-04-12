@@ -222,7 +222,7 @@ class ProcessMidiWorker(QRunnable):
     def run(self):
         try:
             # Extract the notes from midi file using midi helper
-            self.midi_extraction = helper.Extract(f"midi/{self.filename}")
+            self.midi_extraction = helper.ExtractMidi(f"midi/{self.filename}")
         finally:
             if self.midi_extraction is not None:
                 self.signals.result.emit(self.midi_extraction)
@@ -265,7 +265,7 @@ class Window(QWidget):
         self.layout.addWidget(self.list_widget, 0, 0, 2, 2)
 
         self.button_sequence = QPushButton()
-        self.button_sequence.setText("Generate sequences")
+        self.button_sequence.setText("Generate segments")
         self.button_sequence.clicked.connect(self.on_button_sequence)
         self.layout.addWidget(self.button_sequence, 2, 0)
 

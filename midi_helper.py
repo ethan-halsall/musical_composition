@@ -52,11 +52,11 @@ class Generate:
         for char in melody:
             if char in self.dict:
                 state = states[char]
-                curr = self.dict[char].get_notes()
+                curr_note = self.dict[char].get_notes()
                 curr_dur = self.dict[char].get_durations()
 
                 for i in range(state, state + 4):
-                    notes.append(curr[i % len(curr)])
+                    notes.append(curr_note[i % len(curr_note)])
                     durations.append(curr_dur[i % len(curr_dur)])
                 states[char] += 4
 
@@ -174,19 +174,13 @@ class Segment:
         return self.durations
 
 
-class Extract:
+class ExtractMidi:
     def __init__(self, filename):
         self._filename = filename
-        self._chords = []
+        self._notes = []
         self._durations = []
         self.stream = converter.parse(self._filename)
         self.instruments = instrument.partitionByInstrument(self.stream).parts
-
-    def write(self):
-        conv = converter.subConverters.ConverterLilypond()
-        conv.write(self.stream, fmt='lilypond',
-                   fp=self._filename, subformats=['pdf'])
-        move(f"{self._filename}.pdf", f"pdf/{self._filename[5:]}.pdf")
 
     def get_key(self):
         return self.stream.analyze('key')
@@ -196,31 +190,29 @@ class Extract:
 
     def parse_midi(self, inst='Piano'):
         for part in self.instruments:
-            # signature = part[meter.TimeSignature][0]
-            # select elements of only piano
+            # select elements of only inst
             if inst in str(part):
                 notes_to_parse = part.recurse()
-                # finding whether a particular element is note or a chord
                 for element in notes_to_parse:
                     # notes
                     if isinstance(element, note.Note):
-                        self._chords.append(str(element.pitch))
+                        self._notes.append(str(element.pitch))
                         self._durations.append(element.quarterLength)
                     # chords
                     elif isinstance(element, chord.Chord):
-                        self._chords.append(' '.join(str(n.pitch)
-                                                     for n in element))
+                        self._notes.append(' '.join(str(n.pitch)
+                                                    for n in element))
                         self._durations.append(element.quarterLength)
                     # rests
                     elif isinstance(element, note.Rest):
-                        self._chords.append(element.name)
+                        self._notes.append(element.name)
                         self._durations.append(element.quarterLength)
 
-    def get_chords(self):
-        if not self._chords:
+    def get_notes(self):
+        if not self._notes:
             print("Midi has not been parsed")
             return None
-        return self._chords
+        return self._notes
 
     def get_durations(self):
         if not self._durations:
