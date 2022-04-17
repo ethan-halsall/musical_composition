@@ -30,7 +30,7 @@ class Generate:
 
         return dict, alphabet_used
 
-    def l_system(self, axiom, n):
+    def rewriting_system(self, axiom, n):
         out = ""
         for char in axiom:
             if char in self.rules:
@@ -39,7 +39,7 @@ class Generate:
                 out += char
         n -= 1
         if n > 0:
-            return self.l_system(out, n)
+            return self.rewriting_system(out, n)
         return out
 
     def convert_to_segments(self, melody):

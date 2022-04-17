@@ -232,10 +232,8 @@ class Window(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         self.settings = Settings()
-        self.selector = None
         self.layout = QGridLayout()
         self.setLayout(self.layout)
-        self.list_widget = QListWidget()
         self.window().resize(1280, 720)
         self.setWindowTitle("Composer")
 
@@ -247,6 +245,8 @@ class Window(QWidget):
         self.sequences = []
         self.figure = None
 
+        # Popup windows
+        self.selector = None
         self.popup = None
 
         self.threadpool = QThreadPool()
@@ -256,13 +256,13 @@ class Window(QWidget):
         # Get a list of all files in the midi dir with the .mid extension
         files = [f for f in os.listdir('./midi') if f.endswith(".mid")]
         self.graph_positions = {}
+        self.midi_list_widget = QListWidget()
         for count, file in enumerate(files):
-            self.list_widget.insertItem(count, file)
+            self.midi_list_widget.insertItem(count, file)
             self.graph_positions[file] = 0
-        self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
-        self.list_widget.clicked.connect(self.clicked)
-        self.list_widget.setCurrentRow(0)
-        self.layout.addWidget(self.list_widget, 0, 0, 2, 2)
+        self.midi_list_widget.setSelectionMode(QListWidget.ExtendedSelection)
+        self.midi_list_widget.clicked.connect(self.midi_clicked)
+        self.layout.addWidget(self.midi_list_widget, 0, 0, 2, 2)
 
         self.button_sequence = QPushButton()
         self.button_sequence.setText("Generate segments")
@@ -344,21 +344,21 @@ class Window(QWidget):
         print(self.sequences)
 
     def next_graph(self):
-        item = self.list_widget.currentItem().text()
+        item = self.midi_list_widget.currentItem().text()
         new_pos = self.graph_positions[item] + 1
         if new_pos < len(self.current_segments):
             self.graph_positions[item] += 1
             self.on_listbox_click(item)
 
     def prev_graph(self):
-        item = self.list_widget.currentItem().text()
+        item = self.midi_list_widget.currentItem().text()
         new_pos = self.graph_positions[item] - 1
         if new_pos >= 0:
             self.graph_positions[item] -= 1
             self.on_listbox_click(item)
 
-    def clicked(self):
-        item = self.list_widget.currentItem()
+    def midi_clicked(self):
+        item = self.midi_list_widget.currentItem()
         self.on_listbox_click(item.text())
 
     def draw_graph(self, result: list[helper.Segment] = None):
@@ -428,7 +428,7 @@ class Window(QWidget):
 
     def on_button_sequence(self):
         if not self.sequence_generating:
-            item = self.list_widget.currentItem().text()
+            item = self.midi_list_widget.currentItem().text()
             self.selector = InstrumentSelector(
                 item, self.threadpool, self.settings)
             self.selector.show()
@@ -442,7 +442,7 @@ class Window(QWidget):
         if self.sequences:
             gen = helper.Generate(self.sequences, rules)
             gen.generate_rules()
-            melody = gen.l_system(gen.axiom, 4)
+            melody = gen.rewriting_system(gen.axiom, 4)
             print(melody)
             notes, durations = gen.convert_to_segments(melody)
 
