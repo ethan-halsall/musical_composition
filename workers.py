@@ -16,7 +16,7 @@ class WorkerSignals(QObject):
     progress = pyqtSignal(int)
 
 
-class SequenceWorker(QRunnable):
+class GenerateSegmentsWorker(QRunnable):
     def __init__(self, item, filename, instrument, markov_depth, max_length):
         super().__init__()
         self.signals = WorkerSignals()

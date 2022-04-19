@@ -11,9 +11,9 @@ for count, f in enumerate(files):
 filename = files[int(input("Select file: ")) - 1]"""
 
 # Extract the notes from midi file using midi helper
-midi_extraction = helper.Extract(f"midi/beethoven_opus10_1.mid")
+midi_extraction = helper.ExtractMidi(f"midi/beethoven_opus10_1.mid")
 midi_extraction.parse_midi()
-chords = midi_extraction.get_chords()
+chords = midi_extraction.get_notes()
 
 
 # Generate markov chain

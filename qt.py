@@ -205,7 +205,7 @@ class InstrumentSelector(QWidget):
 
         item = self.list_widget.currentItem().text()
 
-        worker = workers.SequenceWorker(
+        worker = workers.GenerateSegmentsWorker(
             self.midi_extraction, self.filename, item, self.settings.order, self.settings.max_length)
         self.threadpool.start(worker)
         worker.signals.finished.connect(self.sequence_complete)
@@ -325,14 +325,12 @@ class Window(QWidget):
         old = self.settings
         self.settings = settings
 
-        if settings.order != old.order:
-            # self.on_button_sequence() #either message of warning saying it will not update current setup or update all...?
-            pass
-        elif settings.prune != old.prune:
+        # Redraw graph if quantization or pruning options have changed
+        if settings.prune != old.prune or settings.quantize != old.quantize:
             # Redraw current graph
             if self.current_segments is not None:
                 print(self.current_row)
-                self.on_listbox_click(self.current_row, update=True)
+                self.update_graph(self.current_row, update=True)
 
     def click_box_listener(self):
         segment = self.current_segment
@@ -341,25 +339,23 @@ class Window(QWidget):
         else:
             self.sequences.remove(segment)
 
-        print(self.sequences)
-
     def next_graph(self):
         item = self.midi_list_widget.currentItem().text()
         new_pos = self.graph_positions[item] + 1
         if new_pos < len(self.current_segments):
             self.graph_positions[item] += 1
-            self.on_listbox_click(item)
+            self.update_graph(item)
 
     def prev_graph(self):
         item = self.midi_list_widget.currentItem().text()
         new_pos = self.graph_positions[item] - 1
         if new_pos >= 0:
             self.graph_positions[item] -= 1
-            self.on_listbox_click(item)
+            self.update_graph(item)
 
     def midi_clicked(self):
         item = self.midi_list_widget.currentItem()
-        self.on_listbox_click(item.text())
+        self.update_graph(item.text())
 
     def draw_graph(self, result: list[helper.Segment] = None):
         if result is not None:
@@ -391,7 +387,7 @@ class Window(QWidget):
             f"{self.graph_positions[filename] + 1}/{len(self.current_segments)}")
         self.current_segment = segment
 
-    def on_listbox_click(self, filename, update=False):
+    def update_graph(self, filename, update=False):
         if self.current_segments is None or filename != self.current_row or update:
             fetch = workers.FetchDataWorker(filename, self.settings.prune, self.settings.quantize)
             fetch.signals.result.connect(self.draw_graph)
@@ -424,7 +420,7 @@ class Window(QWidget):
 
     def sequence_complete(self, filename):
         self.sequence_generating = False
-        self.on_listbox_click(filename, update=True)
+        self.update_graph(filename, update=True)
 
     def on_button_sequence(self):
         if not self.sequence_generating:
@@ -443,15 +439,7 @@ class Window(QWidget):
             gen = helper.Generate(self.sequences, rules)
             gen.generate_rules()
             melody = gen.rewriting_system(gen.axiom, 4)
-            print(melody)
             notes, durations = gen.convert_to_segments(melody)
-
-            """  durations = []
-            notes = []
-            durations = []
-            for sequence in sequences:
-                notes += sequence.get_segment()
-                durations += sequence.durations"""
 
             segment = helper.Segment(
                 notes, "test.mid", 0, durations, "", self.settings.prune, self.settings.quantize)

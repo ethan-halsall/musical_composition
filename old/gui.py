@@ -99,10 +99,10 @@ class Window:
 
     def gen(self, filename):
         # Extract the notes from midi file using midi helper
-        midi_extraction = helper.Extract(f"midi/{filename}")
+        midi_extraction = helper.ExtractMidi(f"midi/{filename}")
         midi_extraction.parse_midi()
         values1, size1 = midi_extraction.get_frequency()
-        chords = midi_extraction.get_chords()
+        chords = midi_extraction.get_notes()
 
         self.current_stream = midi_extraction.stream
 
