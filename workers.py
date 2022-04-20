@@ -16,6 +16,23 @@ class WorkerSignals(QObject):
     progress = pyqtSignal(int)
 
 
+class ProcessMidiWorker(QRunnable):
+    def __init__(self, item):
+        super().__init__()
+        self.signals = WorkerSignals()
+        self.filename = item
+        self.midi_extraction = None
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            # Extract the notes from midi file using midi helper
+            self.midi_extraction = helper.ExtractMidi(f"midi/{self.filename}")
+        finally:
+            if self.midi_extraction is not None:
+                self.signals.result.emit(self.midi_extraction)
+
+
 class GenerateSegmentsWorker(QRunnable):
     def __init__(self, item, filename, instrument, markov_depth, max_length):
         super().__init__()
@@ -63,8 +80,8 @@ class GenerateSegmentsWorker(QRunnable):
                     except Exception as e:
                         print(e)
 
-            database.insert(self.filename, database.to_json(sequences), database.to_json(durations),
-                            str(key))
+            database.insert_or_update(self.filename, database.to_json(sequences), database.to_json(durations),
+                                      str(key))
         except Exception as e:
             print(e)
             traceback.print_exc()
@@ -110,12 +127,12 @@ class FetchDataWorker(QRunnable):
             key = database.get_key(self.filename)
 
             current_segments = []
-            segments = database.to_lst(json_sequence)
+            sequences = database.to_lst(json_sequence)
             durations = database.to_lst(json_durations)
-            for i in range(len(segments)):
+            for i in range(len(sequences)):
                 duration = [float(a) for a in durations[i]]
                 current_segments.append(helper.Segment(
-                    segments[i], self.filename, i, duration, key, self.do_prune, self.do_quantize))
+                    sequences[i], self.filename, i, duration, key, self.do_prune, self.do_quantize))
         except:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]

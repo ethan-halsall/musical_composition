@@ -186,7 +186,7 @@ class InstrumentSelector(QWidget):
         self.button_sequence.clicked.connect(self.select_instrument)
         self.layout.addWidget(self.button_sequence, 2, 0)
 
-        worker = ProcessMidiWorker(self.filename)
+        worker = workers.ProcessMidiWorker(self.filename)
         self.threadpool.start(worker)
         worker.signals.result.connect(self.display_midi_data)
 
@@ -209,23 +209,6 @@ class InstrumentSelector(QWidget):
             self.midi_extraction, self.filename, item, self.settings.order, self.settings.max_length)
         self.threadpool.start(worker)
         worker.signals.finished.connect(self.sequence_complete)
-
-
-class ProcessMidiWorker(QRunnable):
-    def __init__(self, item):
-        super().__init__()
-        self.signals = workers.WorkerSignals()
-        self.filename = item
-        self.midi_extraction = None
-
-    @pyqtSlot()
-    def run(self):
-        try:
-            # Extract the notes from midi file using midi helper
-            self.midi_extraction = helper.ExtractMidi(f"midi/{self.filename}")
-        finally:
-            if self.midi_extraction is not None:
-                self.signals.result.emit(self.midi_extraction)
 
 
 class Window(QWidget):

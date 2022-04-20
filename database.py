@@ -57,7 +57,7 @@ class Database:
         cur.close()
         return rows
 
-    def insert(self, filename, sequences, durations, key):
+    def insert_or_update(self, filename, sequences, durations, key):
         data = self._fetch(
             "SELECT filename FROM Sequence WHERE filename=?", (filename,))
 
