@@ -7,14 +7,14 @@ class Markov:
         self.order = order
 
     def transition_matrix(self, transitions):
-        values, size = np.unique(transitions, return_counts=True)
-        n = len(values)
+        unique_states, size = np.unique(transitions, return_counts=True)
+        n = len(unique_states)
 
         sequences = {}
 
-        for x in range(len(transitions)):
-            if len(transitions[x:x + self.order + 1]) == self.order + 1:
-                key = ",".join(transitions[x:x + self.order + 1])
+        for i in range(len(transitions)):
+            if len(transitions[i:i + self.order + 1]) == self.order + 1:
+                key = ",".join(transitions[i:i + self.order + 1])
                 if key not in sequences:
                     sequences[key] = 1
                 else:
@@ -22,20 +22,20 @@ class Markov:
 
         m = np.zeros((len(sequences), n), int)
 
-        states = []
+        rows = []
 
         for i, (key, value) in enumerate(sequences.items()):
             splits = key.split(",")
             column = splits[self.order]
-            j = np.where(values == column)[0][0]
+            j = np.where(unique_states == column)[0][0]
             m[i][j] = value
-            states.append(",".join(splits[:self.order]))
+            rows.append(",".join(splits[:self.order]))
 
         df = pd.DataFrame(m)  # convert to dataframe
 
         # Set axis labels
-        df = df.set_axis(states)
-        df = df.set_axis(values, axis=1)
+        df = df.set_axis(rows)
+        df = df.set_axis(unique_states, axis=1)
 
         # Combine rows with same keys
         df = df.groupby(df.index).sum()
@@ -45,17 +45,17 @@ class Markov:
 
         return df
 
-    def generate_sequence(self, df, length=400):
-        cur = df.sample()
-        notes = cur.index.values[0].split(",")
-        columns = list(df.columns.values)
-        for i in range(length - 1):
+    def generate_sequence(self, transition_mat, length):
+        cur = transition_mat.sample()
+        sequence = cur.index.values[0].split(",")
+        columns = list(transition_mat.columns.values)
+        for i in range(length - self.order):
             probs = cur.values.flatten().tolist()
-            note_index = np.random.choice(cur.size, p=probs)
-            note = columns[note_index]
+            state_index = np.random.choice(cur.size, p=probs)
+            state = columns[state_index]
             if self.order > 1:
-                cur = df.loc[[",".join(notes[i + 1:i + self.order]) + f",{note}"]]
+                cur = transition_mat.loc[[",".join(sequence[i + 1:i + self.order]) + f",{state}"]]
             else:
-                cur = df.loc[[f"{note}"]]
-            notes.append(note)
-        return notes
+                cur = transition_mat.loc[[f"{state}"]]
+            sequence.append(state)
+        return sequence

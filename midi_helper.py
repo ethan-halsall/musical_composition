@@ -182,12 +182,6 @@ class ExtractMidi:
         self.stream = converter.parse(self._filename)
         self.instruments = instrument.partitionByInstrument(self.stream).parts
 
-    def get_key(self):
-        return self.stream.analyze('key')
-
-    def get_instruments(self):
-        return self.instruments
-
     def parse_midi(self, inst='Piano'):
         for part in self.instruments:
             # select elements of only inst
@@ -207,6 +201,12 @@ class ExtractMidi:
                     elif isinstance(element, note.Rest):
                         self._notes.append(element.name)
                         self._durations.append(element.quarterLength)
+
+    def get_key(self):
+        return self.stream.analyze('key')
+
+    def get_instruments(self):
+        return self.instruments
 
     def get_notes(self):
         if not self._notes:

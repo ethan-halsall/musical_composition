@@ -188,14 +188,14 @@ class InstrumentSelector(QWidget):
 
         worker = workers.ProcessMidiWorker(self.filename)
         self.threadpool.start(worker)
-        worker.signals.result.connect(self.display_midi_data)
+        worker.signals.result.connect(self.display_instrument_data)
 
-    def display_midi_data(self, midi_extraction):
-        self.midi_extraction = midi_extraction
-        for count, inst in enumerate(midi_extraction.get_instruments()):
+    def display_instrument_data(self, result):
+        self.midi_extraction = result
+        for count, inst in enumerate(result.get_instruments()):
             self.list_widget.insertItem(count, str(inst))
 
-    def sequence_complete(self, filename):
+    def generation_complete(self, filename):
         self.signals.finished.emit(filename)
         self.destroy()
 
@@ -208,7 +208,7 @@ class InstrumentSelector(QWidget):
         worker = workers.GenerateSegmentsWorker(
             self.midi_extraction, self.filename, item, self.settings.order, self.settings.max_length)
         self.threadpool.start(worker)
-        worker.signals.finished.connect(self.sequence_complete)
+        worker.signals.finished.connect(self.generation_complete)
 
 
 class Window(QWidget):
@@ -223,9 +223,9 @@ class Window(QWidget):
         self.current_segments = None
         self.current_segment = None
         self.current_row = ""
-        self.sequence_generating = False
+        self.segments_generating = False
         self.now_playing = False
-        self.sequences = []
+        self.selected_segments = []
         self.figure = None
 
         # Popup windows
@@ -249,7 +249,7 @@ class Window(QWidget):
 
         self.button_sequence = QPushButton()
         self.button_sequence.setText("Generate segments")
-        self.button_sequence.clicked.connect(self.on_button_sequence)
+        self.button_sequence.clicked.connect(self.generate_segments)
         self.layout.addWidget(self.button_sequence, 2, 0)
 
         self.button_generate = QPushButton()
@@ -275,7 +275,7 @@ class Window(QWidget):
         self.indicator.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.indicator, 2, 9)
 
-        # Create button for going to next graph
+        # Create button for going to play music
         self.button_play = QPushButton()
         self.button_play.setText("Play")
         self.button_play.clicked.connect(self.play)
@@ -318,9 +318,9 @@ class Window(QWidget):
     def click_box_listener(self):
         segment = self.current_segment
         if self.check_box.isChecked():
-            self.sequences.append(segment)
+            self.selected_segments.append(segment)
         else:
-            self.sequences.remove(segment)
+            self.selected_segments.remove(segment)
 
     def next_graph(self):
         item = self.midi_list_widget.currentItem().text()
@@ -350,7 +350,7 @@ class Window(QWidget):
         pos = self.graph_positions[self.current_segments[0].filename]
         filename = self.current_segments[0].filename
 
-        if self.current_segments[pos] in self.sequences:
+        if self.current_segments[pos] in self.selected_segments:
             self.check_box.setChecked(True)
         else:
             self.check_box.setChecked(False)
@@ -366,8 +366,7 @@ class Window(QWidget):
         plot = part.plot(doneAction=None)
         self.figure = MplCanvas(plot.figure)
         self.layout.addWidget(self.figure, 0, 2, 1, 8)
-        self.indicator.setText(
-            f"{self.graph_positions[filename] + 1}/{len(self.current_segments)}")
+        self.indicator.setText(f"{pos + 1}/{len(self.current_segments)}")
         self.current_segment = segment
 
     def update_graph(self, filename, update=False):
@@ -402,24 +401,24 @@ class Window(QWidget):
         self.now_playing = False
 
     def sequence_complete(self, filename):
-        self.sequence_generating = False
+        self.segments_generating = False
         self.update_graph(filename, update=True)
 
-    def on_button_sequence(self):
-        if not self.sequence_generating:
+    def generate_segments(self):
+        if not self.segments_generating:
             item = self.midi_list_widget.currentItem().text()
             self.selector = InstrumentSelector(
                 item, self.threadpool, self.settings)
             self.selector.show()
             self.selector.signals.finished.connect(self.sequence_complete)
-            self.sequence_generating = True
+            self.segments_generating = True
         else:
             print("Worker already running")
 
     def on_button_generate(self):
         rules = {"a": "b", "b": "ba", "c": "bc"}
-        if self.sequences:
-            gen = helper.Generate(self.sequences, rules)
+        if self.selected_segments:
+            gen = helper.Generate(self.selected_segments, rules)
             gen.generate_rules()
             melody = gen.rewriting_system(gen.axiom, 4)
             notes, durations = gen.convert_to_segments(melody)

@@ -55,7 +55,7 @@ class GenerateSegmentsWorker(QRunnable):
 
             # Generate markov chain
             markov_chain = Markov(self.depth)
-            markov = markov_chain.transition_matrix(chords)
+            markov_notes = markov_chain.transition_matrix(chords)
             float_durations = [float(a)
                                for a in midi_extraction.get_durations()]
             durations_as_str = [str(a) for a in float_durations]
@@ -71,7 +71,7 @@ class GenerateSegmentsWorker(QRunnable):
                         # Generate a segment of length some power 2^n
                         length = 2 ** randint(2, self.max_length)
                         notes = markov_chain.generate_sequence(
-                            markov, length=length)
+                            markov_notes, length=length)
                         durations.append(markov_chain.generate_sequence(
                             durations_markov, length=length))
                         # print(durations)
