@@ -20,7 +20,6 @@ class Settings:
     prune: bool = True
     max_length: int = 4
     quantize: bool = True
-    # multiple_channels: bool = False
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -326,14 +325,14 @@ class Window(QWidget):
         item = self.midi_list_widget.currentItem().text()
         new_pos = self.graph_positions[item] + 1
         if new_pos < len(self.current_segments):
-            self.graph_positions[item] += 1
+            self.graph_positions[item] = new_pos
             self.update_graph(item)
 
     def prev_graph(self):
         item = self.midi_list_widget.currentItem().text()
         new_pos = self.graph_positions[item] - 1
         if new_pos >= 0:
-            self.graph_positions[item] -= 1
+            self.graph_positions[item] = new_pos
             self.update_graph(item)
 
     def midi_clicked(self):

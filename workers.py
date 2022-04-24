@@ -40,7 +40,7 @@ class GenerateSegmentsWorker(QRunnable):
         self.filename = filename
         self.instrument = instrument
         self.item = item
-        self.depth = markov_depth
+        self.order = markov_depth
         self.max_length = max_length
 
     @pyqtSlot()
@@ -50,20 +50,20 @@ class GenerateSegmentsWorker(QRunnable):
             # Extract the notes from midi file using midi helper
             midi_extraction = self.item
             midi_extraction.parse_midi(inst=self.instrument)
-            chords = midi_extraction.get_notes()
+            notes = midi_extraction.get_notes()
             key = midi_extraction.get_key()
 
             # Generate markov chain
-            markov_chain = Markov(self.depth)
-            markov_notes = markov_chain.transition_matrix(chords)
+            markov_chain = Markov(self.order)
+            markov_notes = markov_chain.transition_matrix(notes)
             float_durations = [float(a)
                                for a in midi_extraction.get_durations()]
             durations_as_str = [str(a) for a in float_durations]
             durations_markov = markov_chain.transition_matrix(durations_as_str)
 
             # Generate 15 sequence of notes using the markov chain
-            sequences = []
-            durations = []
+            sequences_notes = []
+            sequence_durations = []
             for _ in range(15):
                 success = False
                 while not success:
@@ -72,15 +72,15 @@ class GenerateSegmentsWorker(QRunnable):
                         length = 2 ** randint(2, self.max_length)
                         notes = markov_chain.generate_sequence(
                             markov_notes, length=length)
-                        durations.append(markov_chain.generate_sequence(
-                            durations_markov, length=length))
-                        # print(durations)
-                        sequences.append(notes)
+                        durations = markov_chain.generate_sequence(
+                            durations_markov, length=length)
+                        sequence_durations.append(durations)
+                        sequences_notes.append(notes)
                         success = True
                     except Exception as e:
                         print(e)
 
-            database.insert_or_update(self.filename, database.to_json(sequences), database.to_json(durations),
+            database.insert_or_update(self.filename, database.to_json(sequences_notes), database.to_json(sequence_durations),
                                       str(key))
         except Exception as e:
             print(e)
