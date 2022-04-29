@@ -1,0 +1,21 @@
+,midi file,degrees of freedom,critical,test statistic,reject H0
+0,beethoven_hammerklavier_3.mid,640,699.963,244.573,False
+1,a_mighty_fortress_is_our_God.mid,70,90.531,39.488,False
+2,mz_570_1.mid,114,139.921,52.342,False
+3,rac_op3_2.mid,227,263.147,84.169,False
+4,chpn_op7_2.mid,85,107.522,31.97,False
+5,liz_rhap10.mid,318,360.587,3176.172,True
+6,beethoven_opus10_1.mid,187,219.906,81.15,False
+7,liz_et_trans8.mid,696,758.485,263.195,False
+8,gra_esp_4.mid,109,134.369,37.604,False
+9,classical_bachminuet_in_g.mid,27,40.113,13.531,False
+10,liz_rhap09.mid,732,796.052,291.194,False
+11,ty_dezember.mid,165,195.973,68.988,False
+12,chpn_op35_2.mid,324,366.977,148.751,False
+13,brahms-waltz-15.mid,75,96.217,36.807,False
+14,ty_januar.mid,156,186.146,81.95,False
+15,bor_ps3.mid,92,115.39,49.12,False
+16,CLASSICAL_beemoonlightson.mid,65,84.821,35.088,False
+17,chpn_op7_1.mid,45,61.656,35.874,False
+18,ty_september.mid,268,307.184,95.711,False
+19,god_alb_esp2.mid,199,232.912,58.112,False
