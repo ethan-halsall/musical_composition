@@ -25,27 +25,27 @@ def chi(filename, order):
     # Generate a sequence of notes using the markov chain
     observed_notes = markov_chain.generate_sequence(markov, length)
 
-    new_notes = []
-    new_chords = []
+    new_observed = []
+    new_expected = []
 
     # Prepare the data by removing occurrences that do not occur in either set
     for note in observed_notes:
         if note in expected_notes:
-            new_notes.append(note)
+            new_observed.append(note)
 
-    for chord in expected_notes:
-        if chord in new_notes:
-            new_chords.append(chord)
+    for note in expected_notes:
+        if note in new_observed:
+            new_expected.append(note)
 
     # Create contingency tables for expected and observed frequencies
-    unique_chord, expected = np.unique(new_chords, return_counts=True)
-    unique_notes, observed = np.unique(new_notes, return_counts=True)
+    unique_chord, expected = np.unique(new_expected, return_counts=True)
+    unique_notes, observed = np.unique(new_observed, return_counts=True)
 
     table = [expected.tolist(), observed.tolist()]
     chi2_stat, p, dof, expected = chi2_contingency(table)
 
-    # interpret p-value
     prob = 0.95
+    # Generate critical value
     critical = chi2.ppf(prob, dof)
 
     return dof, critical, chi2_stat
