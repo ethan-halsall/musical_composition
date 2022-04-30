@@ -55,10 +55,10 @@ def chi(filename, order):
 order = 1
 data = {"midi file": [], "degrees of freedom": [], "critical": [], "test statistic": [], "reject H0": []}
 files = [f for f in os.listdir('./midi') if f.endswith(".mid")]
-for count, f in enumerate(files):
+for file in files:
     try:
-        dof, critical, chi2_stat = chi(f, order)
-        data['midi file'].append(f)
+        dof, critical, chi2_stat = chi(file, order)
+        data['midi file'].append(file)
         data["degrees of freedom"].append(dof)
         data["critical"].append(round(critical, 3))
         data["test statistic"].append(round(chi2_stat, 3))

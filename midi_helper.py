@@ -7,7 +7,7 @@ from music21 import converter, instrument, note, chord
 from music21.chord import Chord
 from music21.midi.translate import streamToMidiFile
 from music21.note import Rest
-from music21.pitch import PitchException
+from music21.pitch import PitchException, Pitch
 from music21.stream import Part
 import string
 from random import choice
@@ -130,16 +130,13 @@ class Segment:
     def prune(self):
         notes = self.notes
         midi = []
-
-        for note in notes:
-            try:
-                pitches = Chord(note).pitches
+        for elem in notes:
+            if elem != "rest":
+                pitches = Chord(elem).pitches
                 avg = 0
                 for pitch in pitches:
                     avg += int(pitch.midi)
                 midi.append(avg / len(pitches))
-            except PitchException:
-                pass
 
         distances = []
         for (x, y) in zip(midi, midi[1:]):
@@ -150,7 +147,7 @@ class Segment:
 
         for i in range(len(distances)):
             if distances[i] > mean + (2 * std):
-                notes[i - 1] = notes[i]
+                notes[i - 1] = self.notes[i]
         self.notes = notes
 
     def quantize(self):
