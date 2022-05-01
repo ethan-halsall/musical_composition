@@ -31,6 +31,7 @@ class MplCanvas(FigureCanvasQTAgg):
 class SettingsPopup(QWidget):
     def __init__(self, settings):
         QWidget.__init__(self)
+        self.error = None
         self.settings = settings
         self.layout = QGridLayout()
         self.setLayout(self.layout)
@@ -105,12 +106,21 @@ class SettingsPopup(QWidget):
         self.destroy()
 
     def on_save(self):
-        settings = Settings(int(self.order_text_field.text()),
-                            self.prune_checkbox.isChecked(),
-                            int(self.max_length_text_field.text()),
-                            self.quantization_checkbox.isChecked())
-        self.signals.result.emit(settings)
-        self.destroy()
+        try:
+            # Raise an exception if any value is not positive
+            if int(self.order_text_field.text()) < 1 or int(self.max_length_text_field.text()) < 1:
+                raise Exception
+            settings = Settings(int(self.order_text_field.text()),
+                                self.prune_checkbox.isChecked(),
+                                int(self.max_length_text_field.text()),
+                                self.quantization_checkbox.isChecked())
+            self.signals.result.emit(settings)
+            self.destroy()
+        except Exception as e:
+            self.error = QErrorMessage()
+            self.error.setWindowTitle("Error")
+            self.error.showMessage('Invalid option entered')
+            print(e)
 
 
 class GeneratorPopup(QWidget):
